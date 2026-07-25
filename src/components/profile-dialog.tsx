@@ -17,6 +17,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { User, Palette, Lock, Check, Sun, Moon, Monitor } from "lucide-react";
+import { useI18n } from "@/i18n/context";
+import { type Locale } from "@/i18n/en";
 
 interface Props {
   user: SupabaseUser;
@@ -27,8 +29,10 @@ interface Props {
 
 export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props) {
   const { theme, setTheme } = useTheme();
+  const { t, locale: currentLocale, setLocale: setI18nLocale } = useI18n();
   const [displayName, setDisplayName] = useState("");
   const [sceneTheme, setSceneTheme] = useState<SceneThemeId>("indigo");
+  const [preferredLang, setPreferredLang] = useState<Locale>(currentLocale);
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [saving, setSaving] = useState(false);
@@ -42,6 +46,9 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
       if (data) {
         setDisplayName(data.display_name || "");
         setSceneTheme(data.scene_color_theme as SceneThemeId);
+        if (data.preferred_language) {
+          setPreferredLang(data.preferred_language as Locale);
+        }
       }
     };
     load();
@@ -50,15 +57,16 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
   const handleSaveProfile = async () => {
     setSaving(true);
     setMsg("");
+    setI18nLocale(preferredLang);
     const { error } = await supabase
       .from("user_profiles")
-      .upsert({ id: user.id, display_name: displayName, scene_color_theme: sceneTheme });
+      .upsert({ id: user.id, display_name: displayName, scene_color_theme: sceneTheme, preferred_language: preferredLang });
 
     if (error) {
       setMsg("Failed to save profile.");
     } else {
       onThemeChange(sceneTheme);
-      setMsg("Profile saved!");
+      setMsg(t.profileSaved);
     }
     setSaving(false);
   };
@@ -78,7 +86,7 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
     if (error) {
       setMsg(error.message);
     } else {
-      setMsg("Password updated!");
+      setMsg(t.passwordUpdated);
       setPassword("");
       setPasswordConfirm("");
     }
@@ -86,9 +94,9 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
   };
 
   const modeOptions = [
-    { value: "dark", label: "Dark", icon: Moon },
-    { value: "light", label: "Light", icon: Sun },
-    { value: "system", label: "System", icon: Monitor },
+    { value: "dark", label: t.dark, icon: Moon },
+    { value: "light", label: t.light, icon: Sun },
+    { value: "system", label: t.system, icon: Monitor },
   ];
 
   return (
@@ -97,20 +105,20 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
-            Profile & Settings
+            {t.profile}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-2">
           <Card className="border-border/50">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Display Name</CardTitle>
+              <CardTitle className="text-sm">{t.displayName}</CardTitle>
             </CardHeader>
             <CardContent>
               <Input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your name"
+                placeholder={t.displayName}
               />
             </CardContent>
           </Card>
@@ -119,9 +127,9 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Sun className="h-4 w-4" />
-                Appearance
+                {t.appearance}
               </CardTitle>
-              <CardDescription>Switch between dark and light mode</CardDescription>
+              <CardDescription>{t.appearanceDesc}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-2">
@@ -150,28 +158,28 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Palette className="h-4 w-4" />
-                Scene Color Theme
+                {t.sceneColor}
               </CardTitle>
-              <CardDescription>Changes the accent color across the app</CardDescription>
+              <CardDescription>{t.sceneDesc}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-2">
-                {Object.values(SCENE_THEMES).map((t) => (
+                {Object.values(SCENE_THEMES).map((th) => (
                   <button
-                    key={t.id}
+                    key={th.id}
                     className={`flex items-center gap-3 rounded-lg border p-3 text-left text-sm transition-colors ${
-                      sceneTheme === t.id
+                      sceneTheme === th.id
                         ? "border-primary bg-primary/10"
                         : "border-border/50 hover:border-border"
                     }`}
-                    onClick={() => setSceneTheme(t.id)}
+                    onClick={() => setSceneTheme(th.id)}
                   >
                     <div
                       className="h-5 w-5 rounded-full shrink-0 ring-2 ring-white/20"
-                      style={{ backgroundColor: t.accent }}
+                      style={{ backgroundColor: th.accent }}
                     />
-                    <span className="flex-1">{t.name}</span>
-                    {sceneTheme === t.id && <Check className="h-4 w-4 text-primary" />}
+                    <span className="flex-1">{th.name}</span>
+                    {sceneTheme === th.id && <Check className="h-4 w-4 text-primary" />}
                   </button>
                 ))}
               </div>
@@ -182,7 +190,7 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Lock className="h-4 w-4" />
-                Change Password
+                {t.changePassword}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -190,13 +198,13 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="New password"
+                placeholder={t.newPassword}
               />
               <Input
                 type="password"
                 value={passwordConfirm}
                 onChange={(e) => setPasswordConfirm(e.target.value)}
-                placeholder="Confirm password"
+                placeholder={t.confirmPassword}
               />
               <Button
                 variant="outline"
@@ -204,7 +212,7 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
                 onClick={handleChangePassword}
                 disabled={saving || !password}
               >
-                Update Password
+                {t.updatePassword}
               </Button>
             </CardContent>
           </Card>
@@ -213,8 +221,8 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSaveProfile} disabled={saving}>Save Profile</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t.cancel}</Button>
+          <Button onClick={handleSaveProfile} disabled={saving}>{t.saveProfile}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

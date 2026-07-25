@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AlertTriangle } from "lucide-react";
+import { useI18n } from "@/i18n/context";
 
 export interface ConflictInfo {
   existing: Activity;
@@ -24,16 +25,18 @@ interface Props {
 }
 
 export function ConflictModal({ conflict, onResolve, onClose }: Props) {
+  const { t } = useI18n();
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-amber-500">
             <AlertTriangle className="h-5 w-5" />
-            Time Conflict
+            {t.timeConflict}
           </DialogTitle>
           <DialogDescription>
-            This activity overlaps with an existing event. What would you like to do?
+            {t.conflictDesc}
           </DialogDescription>
         </DialogHeader>
 
@@ -54,13 +57,13 @@ export function ConflictModal({ conflict, onResolve, onClose }: Props) {
 
         <DialogFooter className="flex-col sm:flex-col gap-2">
           <Button onClick={() => onResolve(true)} className="w-full" variant="outline">
-            Keep Both Activities
+            {t.keepBoth}
           </Button>
           <Button onClick={() => onResolve(false)} className="w-full" variant="destructive">
-            Delete Existing & Add New
+            {t.deleteExisting}
           </Button>
           <Button onClick={onClose} className="w-full" variant="ghost">
-            Cancel
+            {t.cancel}
           </Button>
         </DialogFooter>
       </DialogContent>

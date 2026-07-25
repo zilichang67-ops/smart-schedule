@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/i18n/context";
 
 interface Props {
   activities: Activity[];
@@ -60,6 +61,7 @@ function BucketItem({ activity, onEdit, onDelete, groupColor }: { activity: Acti
 
 export function UnscheduledPool({ activities, onEdit, onDelete, compact, currentMonth, currentDay, groups }: Props) {
   const [rangeWeeks, setRangeWeeks] = useState(2);
+  const { t } = useI18n();
 
   const buckets = useMemo(() => {
     const general: Activity[] = [];
@@ -109,10 +111,10 @@ export function UnscheduledPool({ activities, onEdit, onDelete, compact, current
     return (
       <div className="p-4">
         <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-          Unscheduled ({totalCount})
+          {t.unscheduled} ({totalCount})
         </p>
         {totalCount === 0 ? (
-          <p className="text-xs text-muted-foreground">No unscheduled items</p>
+          <p className="text-xs text-muted-foreground">{t.noUnscheduledItems}</p>
         ) : (
           <div className="space-y-1.5">
             {activities.map((a) => (
@@ -144,49 +146,49 @@ export function UnscheduledPool({ activities, onEdit, onDelete, compact, current
       <Tabs defaultValue="all" className="w-full">
         <TabsList className="w-full gap-1 bg-muted/30 p-1 overflow-x-auto">
           <TabsTrigger value="all" className="text-[11px] gap-1 shrink-0">
-            All ({totalCount})
+            {t.all} ({totalCount})
           </TabsTrigger>
           <TabsTrigger value="general" className="text-[11px] gap-1 shrink-0">
-            General ({buckets.general.length})
+            {t.general} ({buckets.general.length})
           </TabsTrigger>
           <TabsTrigger value="week" className="text-[11px] gap-1 shrink-0">
-            Week ({buckets.thisWeek.length})
+            {t.thisWeek} ({buckets.thisWeek.length})
           </TabsTrigger>
           <TabsTrigger value="month" className="text-[11px] gap-1 shrink-0">
-            Month ({buckets.thisMonth.length})
+            {t.thisMonth} ({buckets.thisMonth.length})
           </TabsTrigger>
           <TabsTrigger value="range" className="text-[11px] gap-1 shrink-0">
-            Range ({buckets.customRange.length})
+            {t.customRange} ({buckets.customRange.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-3 mt-3">
-          {activities.length === 0 ? <EmptyState /> : activities.map((a) => (
+          {activities.length === 0 ? <EmptyState label={t.noUnscheduledItems} /> : activities.map((a) => (
             <BucketItem key={a.id} activity={a} onEdit={onEdit} onDelete={onDelete} groupColor={a.group_id ? groups.find(g => g.id === a.group_id)?.color_hex : undefined} />
           ))}
         </TabsContent>
 
         <TabsContent value="general" className="space-y-3 mt-3">
-          {buckets.general.length === 0 ? <EmptyState label="No general items" /> : buckets.general.map((a) => (
+          {buckets.general.length === 0 ? <EmptyState label={t.noGeneralItems} /> : buckets.general.map((a) => (
             <BucketItem key={a.id} activity={a} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </TabsContent>
 
         <TabsContent value="week" className="space-y-3 mt-3">
-          {buckets.thisWeek.length === 0 ? <EmptyState label="No items this week" /> : buckets.thisWeek.map((a) => (
+          {buckets.thisWeek.length === 0 ? <EmptyState label={t.noItemsThisWeek} /> : buckets.thisWeek.map((a) => (
             <BucketItem key={a.id} activity={a} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </TabsContent>
 
         <TabsContent value="month" className="space-y-3 mt-3">
-          {buckets.thisMonth.length === 0 ? <EmptyState label="No items for this month" /> : buckets.thisMonth.map((a) => (
+          {buckets.thisMonth.length === 0 ? <EmptyState label={t.noItemsForMonth} /> : buckets.thisMonth.map((a) => (
             <BucketItem key={a.id} activity={a} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </TabsContent>
 
         <TabsContent value="range" className="space-y-3 mt-3">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs text-muted-foreground">Next</span>
+            <span className="text-xs text-muted-foreground">{t.nextWeeks}</span>
             <Input
               type="number"
               min={1}
@@ -195,9 +197,9 @@ export function UnscheduledPool({ activities, onEdit, onDelete, compact, current
               onChange={(e) => setRangeWeeks(parseInt(e.target.value) || 2)}
               className="h-7 w-14 text-xs"
             />
-            <span className="text-xs text-muted-foreground">weeks</span>
+            <span className="text-xs text-muted-foreground">{t.week.toLowerCase()}</span>
           </div>
-          {buckets.customRange.length === 0 ? <EmptyState label="No items in this range" /> : buckets.customRange.map((a) => (
+          {buckets.customRange.length === 0 ? <EmptyState label={t.noItemsInRange} /> : buckets.customRange.map((a) => (
             <BucketItem key={a.id} activity={a} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </TabsContent>

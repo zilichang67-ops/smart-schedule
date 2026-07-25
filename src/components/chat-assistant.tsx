@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, Send, X, MessageCircle } from "lucide-react";
+import { useI18n } from "@/i18n/context";
 
 interface Props {
   onActivityParsed: (activities: Omit<Activity, "id" | "user_id" | "created_at">[]) => void;
@@ -36,6 +37,7 @@ export function ChatAssistant({
   const [open, setOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fixingRef = useRef<string | null>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -122,7 +124,7 @@ export function ChatAssistant({
       <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b border-border/50">
         <CardTitle className="text-sm flex items-center gap-2">
           <Bot className="h-4 w-4 text-primary" />
-          AI Scheduling Assistant
+          {t.aiAssistant}
         </CardTitle>
         <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setOpen(false)}>
           <X className="h-4 w-4" />
@@ -146,7 +148,7 @@ export function ChatAssistant({
         {loading && (
           <div className="flex justify-start">
             <div className="bg-muted rounded-lg px-3 py-2 text-sm animate-pulse">
-              Thinking...
+              {t.thinking}
             </div>
           </div>
         )}
@@ -164,7 +166,7 @@ export function ChatAssistant({
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={fixingActivity ? `Fix "${fixingActivity.title}"...` : "e.g. Delete all for Friday"}
+            placeholder={fixingActivity ? `${t.fixPlaceholder} "${fixingActivity.title}"...` : t.chatPlaceholder}
             disabled={loading}
             className="text-sm"
           />
