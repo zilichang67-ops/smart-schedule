@@ -19,7 +19,7 @@ export function JumpToDate({ view, currentDate, onJumpToDate }: Props) {
     view === "day"
       ? format(currentDate, "MMM d, yyyy")
       : view === "week"
-      ? `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")}`
+      ? `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d, yyyy")}`
       : format(currentDate, "MMMM yyyy");
 
   const handleSelect = (date: Date | undefined) => {
