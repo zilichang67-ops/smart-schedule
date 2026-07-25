@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 import { type ParsedActivity } from "@/types/activity";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+export const runtime = "nodejs";
+
+function getGroq() {
+  return new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
 
 export async function POST(request: Request) {
   try {
@@ -46,7 +50,7 @@ Student notes:
 ${text}
 """`;
 
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroq().chat.completions.create({
       model: "llama3-70b-8192",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.1,
