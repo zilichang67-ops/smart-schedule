@@ -1,4 +1,5 @@
 export type Locale = "en" | "vi";
+export type UserRole = "student" | "worker";
 
 export interface Translations {
   // Header
@@ -125,6 +126,39 @@ export interface Translations {
   confirmPassword: string;
   updatePassword: string;
   saveProfile: string;
+
+  // Role
+  profileRole: string;
+  student: string;
+  worker: string;
+  studentDesc: string;
+  workerDesc: string;
+
+  // Forgot password
+  forgotPassword: string;
+  resetPassword: string;
+  resetPasswordDesc: string;
+  resetLinkSent: string;
+  backToSignIn: string;
+  enterNewPassword: string;
+  confirmNewPassword: string;
+  updateMyPassword: string;
+  passwordUpdatedLogin: string;
+  invalidResetLink: string;
+
+  // Role-based group suggestions
+  groupSuggestion1: string;
+  groupSuggestion2: string;
+  groupSuggestion3: string;
+  groupSuggestion4: string;
+  groupSuggestion5: string;
+  groupSuggestion6: string;
+  groupSuggestion7: string;
+  groupSuggestion8: string;
+
+  // Role-based AI hints
+  aiHintStudent: string;
+  aiHintWorker: string;
 }
 
 export const en: Translations = {
@@ -240,4 +274,37 @@ export const en: Translations = {
   confirmPassword: "Confirm password",
   updatePassword: "Update Password",
   saveProfile: "Save Profile",
+
+  // Role
+  profileRole: "Profile Role",
+  student: "Student",
+  worker: "Worker / Professional",
+  studentDesc: "Optimized for classes, homework, and study schedules",
+  workerDesc: "Optimized for meetings, projects, and deep work blocks",
+
+  // Forgot password
+  forgotPassword: "Forgot Password?",
+  resetPassword: "Reset Password",
+  resetPasswordDesc: "Enter your email and we'll send you a reset link",
+  resetLinkSent: "Reset link sent! Please check your inbox.",
+  backToSignIn: "Back to Sign In",
+  enterNewPassword: "Enter New Password",
+  confirmNewPassword: "Confirm New Password",
+  updateMyPassword: "Update My Password",
+  passwordUpdatedLogin: "Password updated! Please sign in.",
+  invalidResetLink: "Invalid or expired reset link. Please request a new one.",
+
+  // Role-based group suggestions
+  groupSuggestion1: "School",
+  groupSuggestion2: "Personal",
+  groupSuggestion3: "STEM",
+  groupSuggestion4: "P.E.",
+  groupSuggestion5: "Work",
+  groupSuggestion6: "Projects",
+  groupSuggestion7: "Meetings",
+  groupSuggestion8: "Deep Work",
+
+  // Role-based AI hints
+  aiHintStudent: "e.g. Math homework at 4pm, study for chemistry exam",
+  aiHintWorker: "e.g. Team standup at 10am, deep work block 2-4pm",
 };

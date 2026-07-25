@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { type Activity, type ActivityGroup, type SceneThemeId } from "@/types/activity";
+import { type Activity, type ActivityGroup, type UserRole, type SceneThemeId } from "@/types/activity";
 import { startOfWeek, format, addDays, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useSleepSettings } from "@/hooks/use-sleep-settings";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
@@ -47,6 +47,7 @@ export function ScheduleDashboard({ user }: Props) {
   const [fixingActivity, setFixingActivity] = useState<Activity | null>(null);
   const [groups, setGroups] = useState<ActivityGroup[]>([]);
   const [groupManagerOpen, setGroupManagerOpen] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole>("student");
   const sleep = useSleepSettings();
   const bulk = useBulkSelection();
   const notif = useNotifications(activities);
@@ -60,10 +61,11 @@ export function ScheduleDashboard({ user }: Props) {
 
   useEffect(() => {
     const loadProfile = async () => {
-      const { data } = await supabase.from("user_profiles").select("scene_color_theme").eq("id", user.id).single();
+      const { data } = await supabase.from("user_profiles").select("scene_color_theme, user_role").eq("id", user.id).single();
       if (data) {
         setSceneTheme(data.scene_color_theme as SceneThemeId);
         applySceneTheme(data.scene_color_theme as SceneThemeId);
+        if (data.user_role) setUserRole(data.user_role as UserRole);
       }
     };
     loadProfile();
@@ -464,12 +466,13 @@ export function ScheduleDashboard({ user }: Props) {
         today={today}
         existingActivities={activities}
         existingGroups={groups}
+        userRole={userRole}
         fixingActivity={fixingActivity}
         onClearFixing={() => setFixingActivity(null)}
       />
 
       <SleepSettingsDialog open={sleepOpen} onOpenChange={setSleepOpen} settings={sleep.settings} onUpdate={sleep.update} onReset={sleep.reset} />
-      <ProfileDialog user={user} open={profileOpen} onOpenChange={setProfileOpen} onThemeChange={(t) => { setSceneTheme(t); applySceneTheme(t); }} />
+      <ProfileDialog user={user} open={profileOpen} onOpenChange={setProfileOpen} onThemeChange={(t) => { setSceneTheme(t); applySceneTheme(t); }} onRoleChange={setUserRole} />
       <GroupManager user={user} open={groupManagerOpen} onOpenChange={setGroupManagerOpen} groups={groups} onGroupsChange={setGroups} />
 
       {editingActivity && (

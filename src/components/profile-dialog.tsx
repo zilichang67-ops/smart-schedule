@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
 import { type User as SupabaseUser } from "@supabase/supabase-js";
-import { type SceneThemeId } from "@/types/activity";
+import { type SceneThemeId, type UserRole } from "@/types/activity";
 import { SCENE_THEMES } from "@/lib/themes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { User, Palette, Lock, Check, Sun, Moon, Monitor } from "lucide-react";
+import { User, Palette, Lock, Check, Sun, Moon, Monitor, GraduationCap, Briefcase } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { type Locale } from "@/i18n/en";
 
@@ -25,14 +25,16 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onThemeChange: (theme: SceneThemeId) => void;
+  onRoleChange?: (role: UserRole) => void;
 }
 
-export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props) {
+export function ProfileDialog({ user, open, onOpenChange, onThemeChange, onRoleChange }: Props) {
   const { theme, setTheme } = useTheme();
   const { t, locale: currentLocale, setLocale: setI18nLocale } = useI18n();
   const [displayName, setDisplayName] = useState("");
   const [sceneTheme, setSceneTheme] = useState<SceneThemeId>("indigo");
   const [preferredLang, setPreferredLang] = useState<Locale>(currentLocale);
+  const [userRole, setUserRole] = useState<UserRole>("student");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [saving, setSaving] = useState(false);
@@ -49,6 +51,9 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
         if (data.preferred_language) {
           setPreferredLang(data.preferred_language as Locale);
         }
+        if (data.user_role) {
+          setUserRole(data.user_role as UserRole);
+        }
       }
     };
     load();
@@ -60,12 +65,13 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
     setI18nLocale(preferredLang);
     const { error } = await supabase
       .from("user_profiles")
-      .upsert({ id: user.id, display_name: displayName, scene_color_theme: sceneTheme, preferred_language: preferredLang });
+      .upsert({ id: user.id, display_name: displayName, scene_color_theme: sceneTheme, preferred_language: preferredLang, user_role: userRole });
 
     if (error) {
       setMsg("Failed to save profile.");
     } else {
       onThemeChange(sceneTheme);
+      onRoleChange?.(userRole);
       setMsg(t.profileSaved);
     }
     setSaving(false);
@@ -120,6 +126,42 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder={t.displayName}
               />
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <GraduationCap className="h-4 w-4" />
+                {t.profileRole}
+              </CardTitle>
+              <CardDescription>{userRole === "student" ? t.studentDesc : t.workerDesc}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-sm transition-colors ${
+                    userRole === "student"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/50 hover:border-border text-muted-foreground"
+                  }`}
+                  onClick={() => setUserRole("student")}
+                >
+                  <GraduationCap className="h-5 w-5" />
+                  {t.student}
+                </button>
+                <button
+                  className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-sm transition-colors ${
+                    userRole === "worker"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/50 hover:border-border text-muted-foreground"
+                  }`}
+                  onClick={() => setUserRole("worker")}
+                >
+                  <Briefcase className="h-5 w-5" />
+                  {t.worker}
+                </button>
+              </div>
             </CardContent>
           </Card>
 

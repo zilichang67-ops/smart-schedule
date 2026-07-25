@@ -53,8 +53,12 @@ export interface UserProfile {
   id: string;
   display_name: string | null;
   scene_color_theme: string;
+  preferred_language: string;
+  user_role: string;
   created_at: string;
 }
+
+export type UserRole = "student" | "worker";
 
 export type SceneThemeId =
   | "indigo"

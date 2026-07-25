@@ -8,7 +8,9 @@ function getGroq() {
   return new Groq({ apiKey: process.env.GROQ_API_KEY });
 }
 
-const SYSTEM_PROMPT = `You are an intelligent scheduling assistant for high school students. You have deep calendar awareness, group management, and predictive scheduling capabilities.
+const SYSTEM_PROMPT = `You are an intelligent scheduling assistant. You have deep calendar awareness, group management, and predictive scheduling capabilities.
+
+{{ROLE_CONTEXT}}
 
 CAPABILITIES:
 1. CREATE activities from messy text
@@ -61,7 +63,7 @@ RULES:
 
 export async function POST(request: Request) {
   try {
-    const { messages, today, existingActivities, existingGroups } = await request.json();
+    const { messages, today, existingActivities, existingGroups, userRole } = await request.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Messages array required." }, { status: 400 });
@@ -80,10 +82,14 @@ export async function POST(request: Request) {
       `- "${a.title}" [precision: ${a.unscheduled_precision || 'NONE'}] ${a.target_date ? `(target: ${a.target_date})` : '(no date)'}${a.group_id ? ` [group: ${existingGroups?.find((g: ActivityGroup) => g.id === a.group_id)?.name || 'unknown'}]` : ''} (id: ${a.id})`
     ).join("\n") || "(none)"}`;
 
+    const roleContext = userRole === "worker"
+      ? `You are assisting a working professional. Use terminology like "meetings", "projects", "deep work", "admin", "client calls", "deadlines". Suggest groups like "Work", "Projects", "Meetings", "Admin".`
+      : `You are assisting a high school student. Use terminology like "classes", "homework", "study blocks", "exams", "P.E.". Suggest groups like "School", "STEM", "P.E.", "Personal".`;
+
     const groqMessages = [
       {
         role: "system" as const,
-        content: SYSTEM_PROMPT + `\n\nToday's date: ${today || new Date().toISOString().split("T")[0]}` + groupContext + activityContext,
+        content: SYSTEM_PROMPT.replace("{{ROLE_CONTEXT}}", roleContext) + `\n\nToday's date: ${today || new Date().toISOString().split("T")[0]}` + groupContext + activityContext,
       },
       ...messages.map((m: ChatMessage) => ({
         role: m.role as "user" | "assistant",

@@ -113,4 +113,33 @@ export const vi: Translations = {
   confirmPassword: "Xác nhận mật khẩu",
   updatePassword: "Cập nhật mật khẩu",
   saveProfile: "Lưu hồ sơ",
+
+  profileRole: "Vai trò",
+  student: "Học sinh",
+  worker: "Nhân viên / Chuyên nghiệp",
+  studentDesc: "Tối ưu cho lớp học, bài tập và lịch học",
+  workerDesc: "Tối ưu cho cuộc họp, dự án và khối lượng công việc",
+
+  forgotPassword: "Quên mật khẩu?",
+  resetPassword: "Đặt lại mật khẩu",
+  resetPasswordDesc: "Nhập email của bạn và chúng tôi sẽ gửi liên kết đặt lại",
+  resetLinkSent: "Đã gửi liên kết đặt lại! Vui lòng kiểm tra hộp thư.",
+  backToSignIn: "Quay lại đăng nhập",
+  enterNewPassword: "Nhập mật khẩu mới",
+  confirmNewPassword: "Xác nhận mật khẩu mới",
+  updateMyPassword: "Cập nhật mật khẩu",
+  passwordUpdatedLogin: "Đã cập nhật mật khẩu! Vui lòng đăng nhập.",
+  invalidResetLink: "Liên kết không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu lại.",
+
+  groupSuggestion1: "Trường học",
+  groupSuggestion2: "Cá nhân",
+  groupSuggestion3: "Khoa học",
+  groupSuggestion4: "Thể dục",
+  groupSuggestion5: "Công việc",
+  groupSuggestion6: "Dự án",
+  groupSuggestion7: "Cuộc họp",
+  groupSuggestion8: "Làm việc tập trung",
+
+  aiHintStudent: "VD: Bài tập toán lúc 4h chiều, ôn thi hóa học",
+  aiHintWorker: "VD: Standup lúc 10h sáng, block làm việc tập trung 2-4h chiều",
 };

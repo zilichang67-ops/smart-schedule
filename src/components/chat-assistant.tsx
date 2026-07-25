@@ -17,6 +17,7 @@ interface Props {
   today: string;
   existingActivities: Activity[];
   existingGroups: ActivityGroup[];
+  userRole?: string;
   fixingActivity?: Activity | null;
   onClearFixing?: () => void;
 }
@@ -29,7 +30,7 @@ const WELCOME: ChatMessage = {
 export function ChatAssistant({
   onActivityParsed, onActivityModified, onActivityDeleted,
   onScheduleUnscheduled, onBulkDelete,
-  today, existingActivities, existingGroups, fixingActivity, onClearFixing,
+  today, existingActivities, existingGroups, userRole, fixingActivity, onClearFixing,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [input, setInput] = useState("");
@@ -60,6 +61,7 @@ export function ChatAssistant({
           today,
           existingActivities,
           existingGroups,
+          userRole: userRole || "student",
         }),
       });
 
@@ -89,7 +91,7 @@ export function ChatAssistant({
       setLoading(false);
       onClearFixing?.();
     }
-  }, [today, existingActivities, existingGroups, onActivityParsed, onActivityModified, onActivityDeleted, onScheduleUnscheduled, onBulkDelete, onClearFixing]);
+  }, [today, existingActivities, existingGroups, userRole, onActivityParsed, onActivityModified, onActivityDeleted, onScheduleUnscheduled, onBulkDelete, onClearFixing]);
 
   useEffect(() => {
     if (fixingActivity && open && fixingRef.current !== fixingActivity.id) {
@@ -166,7 +168,7 @@ export function ChatAssistant({
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={fixingActivity ? `${t.fixPlaceholder} "${fixingActivity.title}"...` : t.chatPlaceholder}
+            placeholder={fixingActivity ? `${t.fixPlaceholder} "${fixingActivity.title}"...` : (userRole === "worker" ? t.aiHintWorker : t.aiHintStudent)}
             disabled={loading}
             className="text-sm"
           />

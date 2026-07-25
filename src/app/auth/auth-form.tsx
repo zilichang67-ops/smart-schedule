@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Zap } from "lucide-react";
+import Link from "next/link";
+import { useI18n } from "@/i18n/context";
 
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -17,6 +19,7 @@ export default function AuthForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const { t } = useI18n();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,9 +48,9 @@ export default function AuthForm() {
             <Zap className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Smart Schedule</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t.smartSchedule}</h1>
             <p className="text-muted-foreground mt-1">
-              Your AI-powered daily planner
+              {isLogin ? t.signInDesc : t.signUpDesc}
             </p>
           </div>
         </div>
@@ -55,18 +58,16 @@ export default function AuthForm() {
         <Card className="border-border/50">
           <CardHeader className="space-y-1">
             <CardTitle className="text-xl">
-              {isLogin ? "Welcome back" : "Create your account"}
+              {isLogin ? t.welcomeBack : t.createAccount}
             </CardTitle>
             <CardDescription>
-              {isLogin
-                ? "Sign in to access your schedule"
-                : "Sign up to start organizing your day"}
+              {isLogin ? t.signInDesc : t.signUpDesc}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t.email}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -78,7 +79,14 @@ export default function AuthForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">{t.password}</Label>
+                  {isLogin && (
+                    <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                      {t.forgotPassword}
+                    </Link>
+                  )}
+                </div>
                 <Input
                   id="password"
                   type="password"
@@ -94,11 +102,11 @@ export default function AuthForm() {
                 <p className="text-sm text-destructive">{error}</p>
               )}
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Loading..." : isLogin ? "Sign In" : "Sign Up"}
+                {loading ? t.loading : isLogin ? t.signIn : t.signUp}
               </Button>
             </form>
             <div className="mt-4 text-center text-sm text-muted-foreground">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+              {isLogin ? t.noAccount : t.hasAccount}{" "}
               <button
                 onClick={() => {
                   setIsLogin(!isLogin);
@@ -106,7 +114,7 @@ export default function AuthForm() {
                 }}
                 className="text-primary hover:underline font-medium"
               >
-                {isLogin ? "Sign up" : "Sign in"}
+                {isLogin ? t.signUp : t.signIn}
               </button>
             </div>
           </CardContent>
