@@ -48,8 +48,16 @@ Return a JSON array:
   "title": "string", "start_time": "HH:MM" or null, "end_time": "HH:MM" or null,
   "notes": "string" or null, "is_scheduled": boolean, "activity_date": "YYYY-MM-DD" or null,
   "is_recurring": boolean, "recurrence_pattern": "string" or null,
-  "recurrence_start_date": "YYYY-MM-DD" or null, "recurrence_end_date": "YYYY-MM-DD" or null
+  "recurrence_start_date": "YYYY-MM-DD" or null, "recurrence_end_date": "YYYY-MM-DD" or null,
+  "unscheduled_precision": "NONE" | "MONTH" | "DATE" or null,
+  "target_date": "YYYY-MM-DD" or null
 }]
+
+Unscheduled precision rules:
+- If no time is given but a month is mentioned (e.g., "sometime in October"): unscheduled_precision="MONTH", target_date="YYYY-MM-01"
+- If no time is given but a specific day is mentioned (e.g., "on Tuesday"): unscheduled_precision="DATE", target_date="YYYY-MM-DD" (compute the date)
+- If completely vague (e.g., "study chemistry"): unscheduled_precision="NONE", target_date=null
+- If a time IS given, leave unscheduled_precision=null and target_date=null (it's scheduled)
 
 Student notes:
 """
@@ -83,6 +91,8 @@ ${text}
       recurrence_pattern: a.recurrence_pattern || null,
       recurrence_start_date: a.recurrence_start_date || null,
       recurrence_end_date: a.recurrence_end_date || null,
+      unscheduled_precision: a.unscheduled_precision || null,
+      target_date: a.target_date || null,
     }));
 
     return NextResponse.json({ activities: validated });

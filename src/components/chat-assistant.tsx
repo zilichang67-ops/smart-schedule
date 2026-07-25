@@ -11,6 +11,8 @@ interface Props {
   onActivityParsed: (activities: Omit<Activity, "id" | "user_id" | "created_at">[]) => void;
   onActivityModified: (targetTitle: string, targetDate: string, updates: Record<string, unknown>) => void;
   onActivityDeleted: (targetTitle: string, targetDate: string) => void;
+  onScheduleUnscheduled: (targetTitle: string, targetDate: string, updates: Record<string, unknown>) => void;
+  onBulkDelete: (filter: { date?: string | null; title?: string | null; unscheduled_only?: boolean | null }) => void;
   today: string;
   existingActivities: Activity[];
   fixingActivity?: Activity | null;
@@ -19,11 +21,12 @@ interface Props {
 
 const WELCOME: ChatMessage = {
   role: "assistant",
-  content: "Hey! I'm your schedule assistant. Tell me about your activities, or ask me to modify existing ones.",
+  content: "Hey! I'm your schedule assistant. Tell me about your activities, or ask me to modify, delete, or schedule unscheduled items.",
 };
 
 export function ChatAssistant({
   onActivityParsed, onActivityModified, onActivityDeleted,
+  onScheduleUnscheduled, onBulkDelete,
   today, existingActivities, fixingActivity, onClearFixing,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
@@ -52,10 +55,7 @@ export function ChatAssistant({
         body: JSON.stringify({
           messages: newMsgs,
           today,
-          existingActivities: existingActivities.map((a) => ({
-            id: a.id, title: a.title, activity_date: a.activity_date,
-            start_time: a.start_time, end_time: a.end_time, notes: a.notes,
-          })),
+          existingActivities,
         }),
       });
 
@@ -72,8 +72,12 @@ export function ChatAssistant({
         onActivityParsed(data.activities);
       } else if ((data.action === "modify_activity" || data.action === "move_activity") && data.target_title && data.target_date && data.updates) {
         onActivityModified(data.target_title, data.target_date, data.updates);
+      } else if (data.action === "schedule_unscheduled" && data.target_title && data.target_date) {
+        onScheduleUnscheduled(data.target_title, data.target_date, data.updates || {});
       } else if (data.action === "delete_activity" && data.target_title && data.target_date) {
         onActivityDeleted(data.target_title, data.target_date);
+      } else if ((data.action === "bulk_delete") && data.delete_filter) {
+        onBulkDelete(data.delete_filter);
       }
     } catch {
       setMessages((prev) => [...prev, { role: "assistant", content: "Network error. Try again?" }]);
@@ -81,7 +85,7 @@ export function ChatAssistant({
       setLoading(false);
       onClearFixing?.();
     }
-  }, [today, existingActivities, onActivityParsed, onActivityModified, onActivityDeleted, onClearFixing]);
+  }, [today, existingActivities, onActivityParsed, onActivityModified, onActivityDeleted, onScheduleUnscheduled, onBulkDelete, onClearFixing]);
 
   useEffect(() => {
     if (fixingActivity && open && fixingRef.current !== fixingActivity.id) {
@@ -158,7 +162,7 @@ export function ChatAssistant({
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={fixingActivity ? `Fix "${fixingActivity.title}"...` : "e.g. Move math to 4:30pm"}
+            placeholder={fixingActivity ? `Fix "${fixingActivity.title}"...` : "e.g. Delete all for Friday"}
             disabled={loading}
             className="text-sm"
           />

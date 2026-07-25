@@ -13,6 +13,8 @@ export interface Activity {
   color_hex: string | null;
   recurrence_start_date: string | null;
   recurrence_end_date: string | null;
+  unscheduled_precision: string | null;
+  target_date: string | null;
   created_at: string;
 }
 
@@ -27,6 +29,8 @@ export interface ParsedActivity {
   recurrence_pattern: string | null;
   recurrence_start_date: string | null;
   recurrence_end_date: string | null;
+  unscheduled_precision: string | null;
+  target_date: string | null;
 }
 
 export interface ChatMessage {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import { type Activity, type SceneThemeId } from "@/types/activity";
 import { startOfWeek, format, addDays, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useSleepSettings } from "@/hooks/use-sleep-settings";
@@ -197,7 +198,7 @@ export function ScheduleDashboard({ user }: Props) {
     setEditingActivity(null);
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteSelected = async () => {
     const ids = Array.from(bulk.selectedIds);
     if (ids.length === 0) return;
     const { error } = await supabase.from("activities").delete().in("id", ids);
@@ -205,6 +206,7 @@ export function ScheduleDashboard({ user }: Props) {
       setActivities((prev) => prev.filter((a) => !bulk.selectedIds.has(a.id)));
       bulk.clear();
       setBulkMode(false);
+      toast.success(`Deleted ${ids.length} activit${ids.length === 1 ? "y" : "ies"}`);
     }
   };
 
@@ -246,7 +248,6 @@ export function ScheduleDashboard({ user }: Props) {
     setSelectedDay(date);
     setCurrentWeekStart(startOfWeek(date, { weekStartsOn: 1 }));
     setMonthView(date);
-    setView("day");
   };
 
   const handleFixWithAI = (activity: Activity) => {
@@ -282,11 +283,71 @@ export function ScheduleDashboard({ user }: Props) {
     const match = activities.find(
       (a) => a.title.toLowerCase() === targetTitle.toLowerCase() && a.activity_date === targetDate
     );
-    if (!match) return;
+    if (!match) {
+      toast.error("Activity not found");
+      return;
+    }
 
     const { error } = await supabase.from("activities").delete().eq("id", match.id);
     if (!error) {
       setActivities((prev) => prev.filter((a) => a.id !== match.id));
+      toast.success(`Deleted "${match.title}"`);
+    }
+  };
+
+  const handleScheduleUnscheduled = async (targetTitle: string, targetDate: string, updates: Record<string, unknown>) => {
+    const match = activities.find(
+      (a) => !a.is_scheduled && a.title.toLowerCase() === targetTitle.toLowerCase()
+    );
+    if (!match) {
+      toast.error(`"${targetTitle}" not found in unscheduled pool`);
+      return;
+    }
+
+    const { error } = await supabase.from("activities").update({
+      start_time: updates.start_time || match.start_time,
+      end_time: updates.end_time || match.end_time,
+      activity_date: targetDate,
+      is_scheduled: true,
+      unscheduled_precision: null,
+      target_date: null,
+      ...(updates.notes !== undefined && { notes: updates.notes }),
+    }).eq("id", match.id);
+
+    if (!error) {
+      setActivities((prev) =>
+        prev.map((a) =>
+          a.id === match.id
+            ? { ...a, start_time: (updates.start_time as string) || a.start_time, end_time: (updates.end_time as string) || a.end_time, activity_date: targetDate, is_scheduled: true, unscheduled_precision: null, target_date: null }
+            : a
+        )
+      );
+      toast.success(`Scheduled "${match.title}" on ${targetDate}`);
+    }
+  };
+
+  const handleBulkDelete = async (filter: { date?: string | null; title?: string | null; unscheduled_only?: boolean | null }) => {
+    let query = supabase.from("activities").delete().eq("user_id", user.id);
+
+    if (filter.title) {
+      query = query.ilike("title", `%${filter.title}%`);
+    }
+    if (filter.date) {
+      query = query.eq("activity_date", filter.date);
+    }
+    if (filter.unscheduled_only) {
+      query = query.eq("is_scheduled", false);
+    }
+
+    const { error } = await query;
+    if (!error) {
+      let filtered = [...activities];
+      if (filter.title) filtered = filtered.filter((a) => a.title.toLowerCase().includes(filter.title!.toLowerCase()));
+      if (filter.date) filtered = filtered.filter((a) => a.activity_date === filter.date);
+      if (filter.unscheduled_only) filtered = filtered.filter((a) => !a.is_scheduled);
+      const ids = new Set(filtered.map((a) => a.id));
+      setActivities((prev) => prev.filter((a) => !ids.has(a.id)));
+      toast.success(`Deleted ${ids.size} activit${ids.size === 1 ? "y" : "ies"}`);
     }
   };
 
@@ -311,7 +372,7 @@ export function ScheduleDashboard({ user }: Props) {
         onPrev={handlePrev} onNext={handleNext}
         onJumpToDate={handleJumpToDate} currentDate={selectedDay || currentWeekStart}
         onOpenSettings={() => setSleepOpen(true)} onOpenProfile={() => setProfileOpen(true)}
-        bulkCount={bulk.count} onBulkDelete={handleBulkDelete}
+        bulkCount={bulk.count} onBulkDelete={handleBulkDeleteSelected}
         onBulkClear={() => { bulk.clear(); setBulkMode(false); }}
         bulkMode={bulkMode} onToggleBulkMode={() => { setBulkMode(!bulkMode); bulk.clear(); }}
       />
@@ -359,7 +420,13 @@ export function ScheduleDashboard({ user }: Props) {
 
           <div className="border-l border-border/50 overflow-y-auto hidden lg:flex lg:flex-col">
             <InputPanel onParse={handleParseComplete} parsing={parsing} setParsing={setParsing} />
-            <UnscheduledPool activities={unscheduled} onEdit={setEditingActivity} onDelete={handleDeleteActivity} />
+            <UnscheduledPool
+              activities={unscheduled}
+              onEdit={setEditingActivity}
+              onDelete={handleDeleteActivity}
+              currentMonth={monthView}
+              currentDay={selectedDay || undefined}
+            />
           </div>
         </div>
       </div>
@@ -368,15 +435,17 @@ export function ScheduleDashboard({ user }: Props) {
         <InputPanel onParse={handleParseComplete} parsing={parsing} setParsing={setParsing} compact />
       </div>
       <div className="lg:hidden border-t border-border/50">
-        <UnscheduledPool activities={unscheduled} onEdit={setEditingActivity} onDelete={handleDeleteActivity} compact />
+        <UnscheduledPool activities={unscheduled} onEdit={setEditingActivity} onDelete={handleDeleteActivity} compact currentMonth={monthView} currentDay={selectedDay || undefined} />
       </div>
 
       <ChatAssistant
         onActivityParsed={handleParseComplete}
         onActivityModified={handleActivityModified}
         onActivityDeleted={handleActivityDeleted}
+        onScheduleUnscheduled={handleScheduleUnscheduled}
+        onBulkDelete={handleBulkDelete}
         today={today}
-        existingActivities={scheduled}
+        existingActivities={activities}
         fixingActivity={fixingActivity}
         onClearFixing={() => setFixingActivity(null)}
       />

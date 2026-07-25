@@ -8,22 +8,24 @@ function getGroq() {
   return new Groq({ apiKey: process.env.GROQ_API_KEY });
 }
 
-const SYSTEM_PROMPT = `You are a scheduling assistant for high school students. You help parse, create, modify, and delete calendar activities.
+const SYSTEM_PROMPT = `You are a scheduling assistant for high school students. You help parse, create, modify, move, schedule unscheduled items, and delete calendar activities.
 
 CAPABILITIES:
 1. CREATE activities from messy text
 2. MODIFY existing activities (change time, title, notes, date)
-3. DELETE activities
+3. DELETE activities (single, by date range, or bulk)
 4. MOVE activities to different times/dates
+5. SCHEDULE unscheduled items (assign time/date to items from unscheduled pool)
 
 RESPONSE FORMAT:
 Always respond with JSON in \`\`\`json\n...\n\`\`\` containing:
 {
-  "action": "create_activity" | "modify_activity" | "delete_activity" | "move_activity",
+  "action": "create_activity" | "modify_activity" | "delete_activity" | "move_activity" | "schedule_unscheduled" | "bulk_delete",
   "activities": [{ ... }],  // for create
-  "target_title": "string", // for modify/delete/move - title of activity to change
-  "target_date": "YYYY-MM-DD", // date of the activity to change
-  "updates": { "title": "...", "start_time": "...", "end_time": "...", "notes": "...", "activity_date": "..." }, // for modify/move
+  "target_title": "string", // for modify/delete/move/schedule_unscheduled
+  "target_date": "YYYY-MM-DD", // date context for the target
+  "updates": { ... }, // for modify/move/schedule_unscheduled
+  "delete_filter": { "date": "YYYY-MM-DD" | null, "title": "string" | null, "unscheduled_only": boolean | null }, // for delete/bulk_delete
   "message": "Brief confirmation."
 }
 
@@ -32,11 +34,10 @@ If info is MISSING for a create, ask 1-2 short questions. Do NOT include JSON in
 RULES:
 - start_time/end_time: "HH:MM" format, 24-hour
 - activity_date: "YYYY-MM-DD"
-- is_recurring: boolean
-- recurrence_pattern: "DAILY", "MON,WED,FRI", etc. or null
-- recurrence_start_date/end_date: "YYYY-MM-DD" or null for date-bounded
-- MILESTONES: If the phrasing describes a single-point action (e.g., "leave school at 3pm", "bus arrives at 7:15", "turn in paper at midnight", "drop off homework"), set start_time AND end_time to the SAME value. Do NOT apply the 1-hour fallback. These are point-in-time events.
-- For other activities with a start time but no end time, default end to +1 hour
+- MILESTONES: Single-point actions (leave, arrive, turn in) → set start_time AND end_time to same value
+- For other activities with start but no end, default end to +1 hour
+- SCHEDULE_UNSCHEDULED: When user says "schedule X to [time]", find the unscheduled item by title, set its start_time, end_time, activity_date, is_scheduled=true, unscheduled_precision=null
+- BULK_DELETE: When user says "delete all for Friday" or "clear unscheduled for this month", use delete_filter with date/title/unscheduled_only
 - For modifications, only include fields that should change
 - Keep responses SHORT and friendly
 - Today's date is provided for context`;
@@ -49,10 +50,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Messages array required." }, { status: 400 });
     }
 
+    const scheduled = existingActivities?.filter((a: Activity) => a.is_scheduled) || [];
+    const unscheduled = existingActivities?.filter((a: Activity) => !a.is_scheduled) || [];
+
     const activityContext = existingActivities?.length
-      ? `\n\nEXISTING ACTIVITIES ON SCHEDULE:\n${existingActivities.map((a: Activity) =>
+      ? `\n\nEXISTING ACTIVITIES:\nSCHEDULED:\n${scheduled.map((a: Activity) =>
           `- "${a.title}" on ${a.activity_date} ${a.start_time || '??:??'}-${a.end_time || '??:??'} (id: ${a.id})`
-        ).join("\n")}`
+        ).join("\n") || "(none)"}\n\nUNSCHEDULED POOL:\n${unscheduled.map((a: Activity) =>
+          `- "${a.title}" [precision: ${a.unscheduled_precision || 'NONE'}] ${a.target_date ? `(target: ${a.target_date})` : '(no date)'} (id: ${a.id})`
+        ).join("\n") || "(none)"}`
       : "";
 
     const groqMessages = [
@@ -86,6 +92,7 @@ export async function POST(request: Request) {
           target_title: parsed.target_title || null,
           target_date: parsed.target_date || null,
           updates: parsed.updates || null,
+          delete_filter: parsed.delete_filter || null,
         });
       } catch {
         return NextResponse.json({ message: content, action: null, activities: [] });
