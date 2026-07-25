@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, Trash2, CalendarDays, Moon, Settings, CheckSquare, X } from "lucide-react";
+import { Zap, LogOut, Trash2, CalendarDays, Moon, Settings, CheckSquare, X, CalendarClock } from "lucide-react";
 
 interface Props {
   user: User;
@@ -12,6 +12,7 @@ interface Props {
   activityCount: number;
   view: "week" | "day" | "month";
   onToggleView: () => void;
+  onToday: () => void;
   onOpenSettings: () => void;
   onOpenProfile: () => void;
   bulkCount: number;
@@ -22,7 +23,7 @@ interface Props {
 }
 
 export function Header({
-  user, onClearAll, activityCount, view, onToggleView,
+  user, onClearAll, activityCount, view, onToggleView, onToday,
   onOpenSettings, onOpenProfile, bulkCount, onBulkDelete,
   onBulkClear, bulkMode, onToggleBulkMode,
 }: Props) {
@@ -33,10 +34,6 @@ export function Header({
     await supabase.auth.signOut();
     router.push("/auth");
     router.refresh();
-  };
-
-  const cycleView = () => {
-    onToggleView();
   };
 
   const viewLabel = view === "week" ? "Week" : view === "day" ? "Day" : "Month";
@@ -64,7 +61,11 @@ export function Header({
       )}
 
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" onClick={cycleView} className="text-xs gap-1.5">
+        <Button variant="ghost" size="sm" onClick={onToday} className="text-xs gap-1.5">
+          <CalendarClock className="h-4 w-4" />
+          Today
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onToggleView} className="text-xs gap-1.5">
           <CalendarDays className="h-4 w-4" />
           {viewLabel}
         </Button>

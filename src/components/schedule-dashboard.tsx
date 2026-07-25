@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTheme } from "next-themes";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { type Activity, type SceneThemeId } from "@/types/activity";
@@ -43,7 +42,6 @@ export function ScheduleDashboard({ user }: Props) {
   const [bulkMode, setBulkMode] = useState(false);
   const sleep = useSleepSettings();
   const bulk = useBulkSelection();
-  const { theme: appearanceTheme } = useTheme();
   const supabase = createClient();
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -68,9 +66,15 @@ export function ScheduleDashboard({ user }: Props) {
   }, [sceneTheme]);
 
   useEffect(() => {
-    const timer = setTimeout(() => applySceneTheme(sceneTheme), 50);
-    return () => clearTimeout(timer);
-  }, [appearanceTheme, sceneTheme]);
+    const observer = new MutationObserver(() => {
+      applySceneTheme(sceneTheme);
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, [sceneTheme]);
 
   useEffect(() => {
     const fetch = async () => {
@@ -209,6 +213,13 @@ export function ScheduleDashboard({ user }: Props) {
 
   const handleDaySelect = (day: Date) => { setSelectedDay(day); setView("day"); };
 
+  const handleToday = () => {
+    const now = new Date();
+    setCurrentWeekStart(startOfWeek(now, { weekStartsOn: 1 }));
+    setSelectedDay(now);
+    setView("day");
+  };
+
   const cycleView = () => {
     const order: Array<"week" | "day" | "month"> = ["week", "day", "month"];
     const idx = order.indexOf(view);
@@ -226,7 +237,7 @@ export function ScheduleDashboard({ user }: Props) {
     <div className="flex h-screen flex-col bg-background">
       <Header
         user={user} onClearAll={handleClearAll} activityCount={activities.length}
-        view={view} onToggleView={cycleView}
+        view={view} onToggleView={cycleView} onToday={handleToday}
         onOpenSettings={() => setSleepOpen(true)} onOpenProfile={() => setProfileOpen(true)}
         bulkCount={bulk.count} onBulkDelete={handleBulkDelete}
         onBulkClear={() => { bulk.clear(); setBulkMode(false); }}

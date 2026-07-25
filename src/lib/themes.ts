@@ -56,66 +56,92 @@ const THEME_HUES: Record<SceneThemeId, number> = {
   amethyst: 310,
 };
 
-export function applySceneTheme(themeId: SceneThemeId) {
-  const root = document.documentElement;
-  const hue = THEME_HUES[themeId];
-  const isDark = root.classList.contains("dark");
-
+function buildThemeCSS(hue: number, isDark: boolean): string {
   if (isDark) {
-    root.style.setProperty("--background", `oklch(0.13 0.015 ${hue})`);
-    root.style.setProperty("--foreground", "oklch(0.97 0 0)");
-    root.style.setProperty("--card", `oklch(0.17 0.015 ${hue})`);
-    root.style.setProperty("--card-foreground", "oklch(0.97 0 0)");
-    root.style.setProperty("--popover", `oklch(0.17 0.015 ${hue})`);
-    root.style.setProperty("--popover-foreground", "oklch(0.97 0 0)");
-    root.style.setProperty("--primary", `oklch(0.65 0.2 ${hue})`);
-    root.style.setProperty("--primary-foreground", "oklch(0.98 0 0)");
-    root.style.setProperty("--secondary", `oklch(0.22 0.015 ${hue})`);
-    root.style.setProperty("--secondary-foreground", "oklch(0.97 0 0)");
-    root.style.setProperty("--muted", `oklch(0.22 0.015 ${hue})`);
-    root.style.setProperty("--muted-foreground", `oklch(0.65 0.02 ${hue})`);
-    root.style.setProperty("--accent", `oklch(0.22 0.015 ${hue})`);
-    root.style.setProperty("--accent-foreground", "oklch(0.97 0 0)");
-    root.style.setProperty("--ring", `oklch(0.65 0.2 ${hue})`);
-    root.style.setProperty("--chart-1", `oklch(0.65 0.2 ${hue})`);
-    root.style.setProperty("--chart-2", `oklch(0.7 0.18 ${hue + 20})`);
-    root.style.setProperty("--chart-3", `oklch(0.6 0.22 ${hue - 20})`);
-    root.style.setProperty("--chart-4", `oklch(0.55 0.15 ${hue + 30})`);
-    root.style.setProperty("--chart-5", `oklch(0.5 0.12 ${hue + 10})`);
-    root.style.setProperty("--sidebar", `oklch(0.15 0.015 ${hue})`);
-    root.style.setProperty("--sidebar-primary", `oklch(0.65 0.2 ${hue})`);
-    root.style.setProperty("--sidebar-accent", `oklch(0.22 0.015 ${hue})`);
-    root.style.setProperty("--sidebar-border", "oklch(1 0 0 / 10%)");
-    root.style.setProperty("--sidebar-ring", `oklch(0.556 0 0)`);
-  } else {
-    root.style.setProperty("--background", `oklch(0.98 0.003 ${hue})`);
-    root.style.setProperty("--foreground", `oklch(0.15 0.01 ${hue})`);
-    root.style.setProperty("--card", `oklch(1 0 0)`);
-    root.style.setProperty("--card-foreground", `oklch(0.15 0.01 ${hue})`);
-    root.style.setProperty("--popover", `oklch(1 0 0)`);
-    root.style.setProperty("--popover-foreground", `oklch(0.15 0.01 ${hue})`);
-    root.style.setProperty("--primary", `oklch(0.55 0.2 ${hue})`);
-    root.style.setProperty("--primary-foreground", "oklch(0.98 0 0)");
-    root.style.setProperty("--secondary", `oklch(0.95 0.01 ${hue})`);
-    root.style.setProperty("--secondary-foreground", `oklch(0.2 0.01 ${hue})`);
-    root.style.setProperty("--muted", `oklch(0.95 0.01 ${hue})`);
-    root.style.setProperty("--muted-foreground", `oklch(0.5 0.02 ${hue})`);
-    root.style.setProperty("--accent", `oklch(0.95 0.01 ${hue})`);
-    root.style.setProperty("--accent-foreground", `oklch(0.2 0.01 ${hue})`);
-    root.style.setProperty("--ring", `oklch(0.55 0.2 ${hue})`);
-    root.style.setProperty("--border", `oklch(0.88 0.005 ${hue})`);
-    root.style.setProperty("--input", `oklch(0.88 0.005 ${hue})`);
-    root.style.setProperty("--chart-1", `oklch(0.55 0.2 ${hue})`);
-    root.style.setProperty("--chart-2", `oklch(0.6 0.18 ${hue + 20})`);
-    root.style.setProperty("--chart-3", `oklch(0.5 0.22 ${hue - 20})`);
-    root.style.setProperty("--chart-4", `oklch(0.45 0.15 ${hue + 30})`);
-    root.style.setProperty("--chart-5", `oklch(0.4 0.12 ${hue + 10})`);
-    root.style.setProperty("--sidebar", `oklch(0.97 0.005 ${hue})`);
-    root.style.setProperty("--sidebar-primary", `oklch(0.55 0.2 ${hue})`);
-    root.style.setProperty("--sidebar-accent", `oklch(0.95 0.01 ${hue})`);
-    root.style.setProperty("--sidebar-border", `oklch(0.88 0.005 ${hue})`);
-    root.style.setProperty("--sidebar-ring", `oklch(0.55 0.2 ${hue})`);
+    return `
+      html.dark {
+        --background: oklch(0.13 0.015 ${hue}) !important;
+        --foreground: oklch(0.97 0 0) !important;
+        --card: oklch(0.17 0.015 ${hue}) !important;
+        --card-foreground: oklch(0.97 0 0) !important;
+        --popover: oklch(0.17 0.015 ${hue}) !important;
+        --popover-foreground: oklch(0.97 0 0) !important;
+        --primary: oklch(0.65 0.2 ${hue}) !important;
+        --primary-foreground: oklch(0.98 0 0) !important;
+        --secondary: oklch(0.22 0.015 ${hue}) !important;
+        --secondary-foreground: oklch(0.97 0 0) !important;
+        --muted: oklch(0.22 0.015 ${hue}) !important;
+        --muted-foreground: oklch(0.65 0.02 ${hue}) !important;
+        --accent: oklch(0.22 0.015 ${hue}) !important;
+        --accent-foreground: oklch(0.97 0 0) !important;
+        --ring: oklch(0.65 0.2 ${hue}) !important;
+        --border: oklch(1 0 0 / 10%) !important;
+        --input: oklch(1 0 0 / 15%) !important;
+        --chart-1: oklch(0.65 0.2 ${hue}) !important;
+        --chart-2: oklch(0.7 0.18 ${hue + 20}) !important;
+        --chart-3: oklch(0.6 0.22 ${hue - 20}) !important;
+        --chart-4: oklch(0.55 0.15 ${hue + 30}) !important;
+        --chart-5: oklch(0.5 0.12 ${hue + 10}) !important;
+        --sidebar: oklch(0.15 0.015 ${hue}) !important;
+        --sidebar-foreground: oklch(0.97 0 0) !important;
+        --sidebar-primary: oklch(0.65 0.2 ${hue}) !important;
+        --sidebar-primary-foreground: oklch(0.98 0 0) !important;
+        --sidebar-accent: oklch(0.22 0.015 ${hue}) !important;
+        --sidebar-accent-foreground: oklch(0.97 0 0) !important;
+        --sidebar-border: oklch(1 0 0 / 10%) !important;
+        --sidebar-ring: oklch(0.556 0 0) !important;
+      }
+    `;
   }
+  return `
+    html:not(.dark) {
+      --background: oklch(0.98 0.003 ${hue}) !important;
+      --foreground: oklch(0.15 0.01 ${hue}) !important;
+      --card: oklch(1 0 0) !important;
+      --card-foreground: oklch(0.15 0.01 ${hue}) !important;
+      --popover: oklch(1 0 0) !important;
+      --popover-foreground: oklch(0.15 0.01 ${hue}) !important;
+      --primary: oklch(0.55 0.2 ${hue}) !important;
+      --primary-foreground: oklch(0.98 0 0) !important;
+      --secondary: oklch(0.95 0.01 ${hue}) !important;
+      --secondary-foreground: oklch(0.2 0.01 ${hue}) !important;
+      --muted: oklch(0.95 0.01 ${hue}) !important;
+      --muted-foreground: oklch(0.5 0.02 ${hue}) !important;
+      --accent: oklch(0.95 0.01 ${hue}) !important;
+      --accent-foreground: oklch(0.2 0.01 ${hue}) !important;
+      --ring: oklch(0.55 0.2 ${hue}) !important;
+      --border: oklch(0.88 0.005 ${hue}) !important;
+      --input: oklch(0.88 0.005 ${hue}) !important;
+      --chart-1: oklch(0.55 0.2 ${hue}) !important;
+      --chart-2: oklch(0.6 0.18 ${hue + 20}) !important;
+      --chart-3: oklch(0.5 0.22 ${hue - 20}) !important;
+      --chart-4: oklch(0.45 0.15 ${hue + 30}) !important;
+      --chart-5: oklch(0.4 0.12 ${hue + 10}) !important;
+      --sidebar: oklch(0.97 0.005 ${hue}) !important;
+      --sidebar-primary: oklch(0.55 0.2 ${hue}) !important;
+      --sidebar-accent: oklch(0.95 0.01 ${hue}) !important;
+      --sidebar-border: oklch(0.88 0.005 ${hue}) !important;
+      --sidebar-ring: oklch(0.55 0.2 ${hue}) !important;
+    }
+  `;
+}
+
+const STYLE_ID = "scene-theme-overrides";
+
+export function applySceneTheme(themeId: SceneThemeId) {
+  if (typeof document === "undefined") return;
+
+  const hue = THEME_HUES[themeId];
+  const isDark = document.documentElement.classList.contains("dark");
+
+  let styleEl = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
+  if (!styleEl) {
+    styleEl = document.createElement("style");
+    styleEl.id = STYLE_ID;
+    document.head.appendChild(styleEl);
+  }
+
+  styleEl.textContent = buildThemeCSS(hue, isDark);
 }
 
 const PALETTE_HUES: Record<SceneThemeId, number[]> = {
