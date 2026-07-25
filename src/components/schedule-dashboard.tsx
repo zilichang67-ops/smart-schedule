@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { type Activity, type SceneThemeId } from "@/types/activity";
@@ -42,6 +43,7 @@ export function ScheduleDashboard({ user }: Props) {
   const [bulkMode, setBulkMode] = useState(false);
   const sleep = useSleepSettings();
   const bulk = useBulkSelection();
+  const { theme: appearanceTheme } = useTheme();
   const supabase = createClient();
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -64,6 +66,11 @@ export function ScheduleDashboard({ user }: Props) {
   useEffect(() => {
     applySceneTheme(sceneTheme);
   }, [sceneTheme]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => applySceneTheme(sceneTheme), 50);
+    return () => clearTimeout(timer);
+  }, [appearanceTheme, sceneTheme]);
 
   useEffect(() => {
     const fetch = async () => {

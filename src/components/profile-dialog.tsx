@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
 import { type User as SupabaseUser } from "@supabase/supabase-js";
 import { type SceneThemeId } from "@/types/activity";
@@ -15,7 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { User, Palette, Lock, Check } from "lucide-react";
+import { User, Palette, Lock, Check, Sun, Moon, Monitor } from "lucide-react";
 
 interface Props {
   user: SupabaseUser;
@@ -25,8 +26,9 @@ interface Props {
 }
 
 export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props) {
+  const { theme, setTheme } = useTheme();
   const [displayName, setDisplayName] = useState("");
-  const [theme, setTheme] = useState<SceneThemeId>("indigo");
+  const [sceneTheme, setSceneTheme] = useState<SceneThemeId>("indigo");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [saving, setSaving] = useState(false);
@@ -39,7 +41,7 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
       const { data } = await supabase.from("user_profiles").select("*").eq("id", user.id).single();
       if (data) {
         setDisplayName(data.display_name || "");
-        setTheme(data.scene_color_theme as SceneThemeId);
+        setSceneTheme(data.scene_color_theme as SceneThemeId);
       }
     };
     load();
@@ -50,12 +52,12 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
     setMsg("");
     const { error } = await supabase
       .from("user_profiles")
-      .upsert({ id: user.id, display_name: displayName, scene_color_theme: theme });
+      .upsert({ id: user.id, display_name: displayName, scene_color_theme: sceneTheme });
 
     if (error) {
       setMsg("Failed to save profile.");
     } else {
-      onThemeChange(theme);
+      onThemeChange(sceneTheme);
       setMsg("Profile saved!");
     }
     setSaving(false);
@@ -83,6 +85,12 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
     setSaving(false);
   };
 
+  const modeOptions = [
+    { value: "dark", label: "Dark", icon: Moon },
+    { value: "light", label: "Light", icon: Sun },
+    { value: "system", label: "System", icon: Monitor },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
@@ -98,12 +106,43 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Display Name</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent>
               <Input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your name"
               />
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Sun className="h-4 w-4" />
+                Appearance
+              </CardTitle>
+              <CardDescription>Switch between dark and light mode</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-2">
+                {modeOptions.map((opt) => {
+                  const Icon = opt.icon;
+                  return (
+                    <button
+                      key={opt.value}
+                      className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-sm transition-colors ${
+                        theme === opt.value
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border/50 hover:border-border text-muted-foreground"
+                      }`}
+                      onClick={() => setTheme(opt.value)}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
 
@@ -121,18 +160,18 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange }: Props
                   <button
                     key={t.id}
                     className={`flex items-center gap-3 rounded-lg border p-3 text-left text-sm transition-colors ${
-                      theme === t.id
+                      sceneTheme === t.id
                         ? "border-primary bg-primary/10"
                         : "border-border/50 hover:border-border"
                     }`}
-                    onClick={() => setTheme(t.id)}
+                    onClick={() => setSceneTheme(t.id)}
                   >
                     <div
-                      className="h-5 w-5 rounded-full shrink-0"
+                      className="h-5 w-5 rounded-full shrink-0 ring-2 ring-white/20"
                       style={{ backgroundColor: t.accent }}
                     />
                     <span className="flex-1">{t.name}</span>
-                    {theme === t.id && <Check className="h-4 w-4 text-primary" />}
+                    {sceneTheme === t.id && <Check className="h-4 w-4 text-primary" />}
                   </button>
                 ))}
               </div>
