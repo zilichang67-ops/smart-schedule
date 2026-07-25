@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { type ChatMessage, type Activity } from "@/types/activity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,67 +9,94 @@ import { Bot, Send, X, MessageCircle } from "lucide-react";
 
 interface Props {
   onActivityParsed: (activities: Omit<Activity, "id" | "user_id" | "created_at">[]) => void;
+  onActivityModified: (targetTitle: string, targetDate: string, updates: Record<string, unknown>) => void;
+  onActivityDeleted: (targetTitle: string, targetDate: string) => void;
   today: string;
+  existingActivities: Activity[];
+  fixingActivity?: Activity | null;
+  onClearFixing?: () => void;
 }
 
-export function ChatAssistant({ onActivityParsed, today }: Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content: "Hey! I'm your schedule assistant. Tell me about your activities in plain English — like \"soccer practice every Tuesday at 4pm\" — and I'll help you plan your week.",
-    },
-  ]);
+const WELCOME: ChatMessage = {
+  role: "assistant",
+  content: "Hey! I'm your schedule assistant. Tell me about your activities, or ask me to modify existing ones.",
+};
+
+export function ChatAssistant({
+  onActivityParsed, onActivityModified, onActivityDeleted,
+  today, existingActivities, fixingActivity, onClearFixing,
+}: Props) {
+  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fixingRef = useRef<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
-
-    const userMsg: ChatMessage = { role: "user", content: input.trim() };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setInput("");
+  const doSend = useCallback(async (text: string) => {
     setLoading(true);
+    const newMsgs: ChatMessage[] = [];
+    setMessages((prev) => {
+      newMsgs.push(...prev, { role: "user", content: text });
+      return newMsgs;
+    });
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages, today }),
+        body: JSON.stringify({
+          messages: newMsgs,
+          today,
+          existingActivities: existingActivities.map((a) => ({
+            id: a.id, title: a.title, activity_date: a.activity_date,
+            start_time: a.start_time, end_time: a.end_time, notes: a.notes,
+          })),
+        }),
       });
 
       const data = await res.json();
 
       if (data.error) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "Sorry, something went wrong. Try again?" },
-        ]);
+        setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, something went wrong." }]);
         return;
       }
 
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.message },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
 
-      if (data.activities && data.activities.length > 0) {
+      if (data.action === "create_activity" && data.activities?.length > 0) {
         onActivityParsed(data.activities);
+      } else if ((data.action === "modify_activity" || data.action === "move_activity") && data.target_title && data.target_date && data.updates) {
+        onActivityModified(data.target_title, data.target_date, data.updates);
+      } else if (data.action === "delete_activity" && data.target_title && data.target_date) {
+        onActivityDeleted(data.target_title, data.target_date);
       }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Network error. Try again?" },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Network error. Try again?" }]);
     } finally {
       setLoading(false);
+      onClearFixing?.();
     }
+  }, [today, existingActivities, onActivityParsed, onActivityModified, onActivityDeleted, onClearFixing]);
+
+  useEffect(() => {
+    if (fixingActivity && open && fixingRef.current !== fixingActivity.id) {
+      fixingRef.current = fixingActivity.id;
+      const fixMsg = `I want to fix: "${fixingActivity.title}" on ${fixingActivity.activity_date} at ${fixingActivity.start_time || "no time set"}. What should I change?`;
+      setMessages((prev) => [...prev, { role: "user", content: fixMsg }]);
+      doSend(fixMsg);
+    }
+  }, [fixingActivity, open, doSend]);
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+    const text = input.trim();
+    setInput("");
+    await doSend(text);
   };
 
   if (!open) {
@@ -131,7 +158,7 @@ export function ChatAssistant({ onActivityParsed, today }: Props) {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="e.g. Soccer practice Tuesdays at 4pm"
+            placeholder={fixingActivity ? `Fix "${fixingActivity.title}"...` : "e.g. Move math to 4:30pm"}
             disabled={loading}
             className="text-sm"
           />

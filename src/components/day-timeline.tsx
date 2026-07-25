@@ -5,7 +5,7 @@ import { type Activity, type SceneThemeId } from "@/types/activity";
 import { format } from "date-fns";
 import { getAdjacentColors } from "@/lib/themes";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, Pencil, Trash2, Sparkles } from "lucide-react";
 
 interface Props {
   date: Date;
@@ -17,6 +17,7 @@ interface Props {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   sceneTheme: SceneThemeId;
+  onFixWithAI: (a: Activity) => void;
 }
 
 const HOUR_HEIGHT = 64;
@@ -37,7 +38,7 @@ function roundUpTo15(minutes: number): number {
   return Math.ceil(minutes / 15) * 15;
 }
 
-export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsleep, selectedIds, onToggleSelect, sceneTheme }: Props) {
+export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsleep, selectedIds, onToggleSelect, sceneTheme, onFixWithAI }: Props) {
   const sorted = [...activities]
     .filter((a) => a.start_time && a.end_time)
     .sort((a, b) => timeToMinutes(a.start_time!) - timeToMinutes(b.start_time!));
@@ -114,6 +115,9 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsle
                     </div>
                   </div>
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-white/20" onClick={(e) => { e.stopPropagation(); onFixWithAI(activity); }} title="Fix with AI">
+                      <Sparkles className="h-3 w-3" />
+                    </Button>
                     <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-white/20" onClick={(e) => { e.stopPropagation(); onEdit(activity); }}>
                       <Pencil className="h-3 w-3" />
                     </Button>

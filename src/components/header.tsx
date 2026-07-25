@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, Trash2, CalendarDays, Moon, Settings, CheckSquare, X, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Zap, LogOut, Trash2, Moon, Settings, CheckSquare, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { JumpToDate } from "@/components/jump-to-date";
 
 interface Props {
   user: User;
@@ -15,6 +16,8 @@ interface Props {
   onToday: () => void;
   onPrev: () => void;
   onNext: () => void;
+  onJumpToDate: (date: Date) => void;
+  currentDate: Date;
   onOpenSettings: () => void;
   onOpenProfile: () => void;
   bulkCount: number;
@@ -22,13 +25,12 @@ interface Props {
   onBulkClear: () => void;
   bulkMode: boolean;
   onToggleBulkMode: () => void;
-  dateLabel: string;
 }
 
 export function Header({
   user, onClearAll, activityCount, view, onToggleView, onToday,
-  onPrev, onNext, onOpenSettings, onOpenProfile, bulkCount, onBulkDelete,
-  onBulkClear, bulkMode, onToggleBulkMode, dateLabel,
+  onPrev, onNext, onJumpToDate, currentDate, onOpenSettings, onOpenProfile,
+  bulkCount, onBulkDelete, onBulkClear, bulkMode, onToggleBulkMode,
 }: Props) {
   const router = useRouter();
   const supabase = createClient();
@@ -67,34 +69,34 @@ export function Header({
         <Button variant="ghost" size="sm" onClick={onPrev} className="h-8 w-8 p-0">
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="sm" onClick={onToday} className="text-xs gap-1.5">
-          <CalendarClock className="h-4 w-4" />
+        <Button variant="ghost" size="sm" onClick={onToday} className="text-xs h-8">
           Today
         </Button>
         <Button variant="ghost" size="sm" onClick={onNext} className="h-8 w-8 p-0">
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <span className="text-xs text-muted-foreground font-medium min-w-[120px] text-center hidden sm:inline">{dateLabel}</span>
-        <Button variant="ghost" size="sm" onClick={onToggleView} className="text-xs gap-1.5">
-          <CalendarDays className="h-4 w-4" />
+
+        <JumpToDate view={view} currentDate={currentDate} onJumpToDate={onJumpToDate} />
+
+        <Button variant="ghost" size="sm" onClick={onToggleView} className="text-xs gap-1.5 h-8">
           {viewLabel}
         </Button>
-        <Button variant="ghost" size="sm" onClick={onToggleBulkMode} className={`gap-1.5 ${bulkMode ? "text-primary" : ""}`}>
+        <Button variant="ghost" size="sm" onClick={onToggleBulkMode} className={`h-8 gap-1.5 ${bulkMode ? "text-primary" : ""}`}>
           <CheckSquare className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="sm" onClick={onOpenSettings} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={onOpenSettings} className="h-8 gap-1.5">
           <Moon className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="sm" onClick={onOpenProfile} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={onOpenProfile} className="h-8 gap-1.5">
           <Settings className="h-4 w-4" />
         </Button>
         {activityCount > 0 && !bulkMode && (
-          <Button variant="ghost" size="sm" onClick={onClearAll} className="text-muted-foreground hover:text-destructive">
+          <Button variant="ghost" size="sm" onClick={onClearAll} className="h-8 text-muted-foreground hover:text-destructive">
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
         <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
-        <Button variant="ghost" size="sm" onClick={handleSignOut}>
+        <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8">
           <LogOut className="h-4 w-4" />
         </Button>
       </div>

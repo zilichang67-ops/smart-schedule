@@ -18,6 +18,7 @@ interface Props {
   onSelectDay: (date: Date) => void;
   isAsleep: (hour: number) => boolean;
   onEdit: (a: Activity) => void;
+  onFixWithAI: (a: Activity) => void;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   sceneTheme: SceneThemeId;
@@ -41,7 +42,7 @@ function roundUpTo15(minutes: number): number {
   return Math.ceil(minutes / 15) * 15;
 }
 
-export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAsleep, onEdit, selectedIds, onToggleSelect, sceneTheme }: Props) {
+export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAsleep, onEdit, onFixWithAI, selectedIds, onToggleSelect, sceneTheme }: Props) {
   const days = useMemo(() => {
     const end = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
     return eachDayOfInterval({ start: currentWeekStart, end });
@@ -121,14 +122,23 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAs
                         return (
                           <div
                             key={activity.id}
-                            className={`absolute left-0.5 right-0.5 rounded px-1.5 py-0.5 border-l-2 cursor-pointer hover:ring-2 hover:ring-white/30 overflow-hidden transition-all ${selected ? "ring-2 ring-primary" : ""}`}
+                            className={`absolute left-0.5 right-0.5 rounded px-1.5 py-0.5 border-l-2 cursor-pointer hover:ring-2 hover:ring-white/30 overflow-hidden transition-all group/card ${selected ? "ring-2 ring-primary" : ""}`}
                             style={{ top: topOffset, height: Math.max(height, 18), backgroundColor: bg, color: "white", borderLeftColor: "rgba(255,255,255,0.3)" }}
                             onClick={(e) => {
                               if (selected || e.shiftKey) { onToggleSelect(activity.id); }
                               else { onEdit(activity); }
                             }}
                           >
-                            <p className="text-[10px] font-medium truncate">{activity.title}</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-[10px] font-medium truncate">{activity.title}</p>
+                              <button
+                                className="opacity-0 group-hover/card:opacity-100 transition-opacity text-white/70 hover:text-white shrink-0"
+                                onClick={(e) => { e.stopPropagation(); onFixWithAI(activity); }}
+                                title="Fix with AI"
+                              >
+                                <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z"/></svg>
+                              </button>
+                            </div>
                             <p className="text-[9px] opacity-70 truncate">{activity.start_time}-{activity.end_time}</p>
                           </div>
                         );

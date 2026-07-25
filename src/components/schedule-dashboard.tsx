@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { type Activity, type SceneThemeId } from "@/types/activity";
-import { startOfWeek, format, addDays, addWeeks, subWeeks, addMonths, subMonths, endOfWeek } from "date-fns";
+import { startOfWeek, format, addDays, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useSleepSettings } from "@/hooks/use-sleep-settings";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { applySceneTheme } from "@/lib/themes";
@@ -41,6 +41,7 @@ export function ScheduleDashboard({ user }: Props) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [sceneTheme, setSceneTheme] = useState<SceneThemeId>("indigo");
   const [bulkMode, setBulkMode] = useState(false);
+  const [fixingActivity, setFixingActivity] = useState<Activity | null>(null);
   const sleep = useSleepSettings();
   const bulk = useBulkSelection();
   const supabase = createClient();
@@ -241,14 +242,53 @@ export function ScheduleDashboard({ user }: Props) {
     }
   };
 
-  const dateLabel = useMemo(() => {
-    if (view === "day") return format(selectedDay || new Date(), "EEEE, MMM d, yyyy");
-    if (view === "week") {
-      const end = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
-      return `${format(currentWeekStart, "MMM d")} – ${format(end, "MMM d, yyyy")}`;
+  const handleJumpToDate = (date: Date) => {
+    setSelectedDay(date);
+    setCurrentWeekStart(startOfWeek(date, { weekStartsOn: 1 }));
+    setMonthView(date);
+    setView("day");
+  };
+
+  const handleFixWithAI = (activity: Activity) => {
+    setFixingActivity(activity);
+  };
+
+  const handleActivityModified = async (targetTitle: string, targetDate: string, updates: Record<string, unknown>) => {
+    const match = activities.find(
+      (a) => a.title.toLowerCase() === targetTitle.toLowerCase() && a.activity_date === targetDate
+    );
+    if (!match) return;
+
+    const { error } = await supabase.from("activities").update({
+      ...(updates.title !== undefined && { title: updates.title }),
+      ...(updates.start_time !== undefined && { start_time: updates.start_time }),
+      ...(updates.end_time !== undefined && { end_time: updates.end_time }),
+      ...(updates.notes !== undefined && { notes: updates.notes }),
+      ...(updates.activity_date !== undefined && { activity_date: updates.activity_date }),
+    }).eq("id", match.id);
+
+    if (!error) {
+      setActivities((prev) =>
+        prev.map((a) =>
+          a.id === match.id
+            ? { ...a, ...(updates as Partial<Activity>) }
+            : a
+        )
+      );
     }
-    return format(monthView, "MMMM yyyy");
-  }, [view, selectedDay, currentWeekStart, monthView]);
+  };
+
+  const handleActivityDeleted = async (targetTitle: string, targetDate: string) => {
+    const match = activities.find(
+      (a) => a.title.toLowerCase() === targetTitle.toLowerCase() && a.activity_date === targetDate
+    );
+    if (!match) return;
+
+    const { error } = await supabase.from("activities").delete().eq("id", match.id);
+    if (!error) {
+      setActivities((prev) => prev.filter((a) => a.id !== match.id));
+    }
+  };
 
   const cycleView = () => {
     const order: Array<"week" | "day" | "month"> = ["week", "day", "month"];
@@ -268,7 +308,8 @@ export function ScheduleDashboard({ user }: Props) {
       <Header
         user={user} onClearAll={handleClearAll} activityCount={activities.length}
         view={view} onToggleView={cycleView} onToday={handleToday}
-        onPrev={handlePrev} onNext={handleNext} dateLabel={dateLabel}
+        onPrev={handlePrev} onNext={handleNext}
+        onJumpToDate={handleJumpToDate} currentDate={selectedDay || currentWeekStart}
         onOpenSettings={() => setSleepOpen(true)} onOpenProfile={() => setProfileOpen(true)}
         bulkCount={bulk.count} onBulkDelete={handleBulkDelete}
         onBulkClear={() => { bulk.clear(); setBulkMode(false); }}
@@ -291,7 +332,8 @@ export function ScheduleDashboard({ user }: Props) {
               <WeeklyCalendar
                 currentWeekStart={currentWeekStart} onWeekChange={setCurrentWeekStart}
                 activities={scheduled} onSelectDay={handleDaySelect} isAsleep={sleep.isAsleep}
-                onEdit={setEditingActivity} selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle}
+                onEdit={setEditingActivity} onFixWithAI={handleFixWithAI}
+                selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle}
                 sceneTheme={sceneTheme}
               />
             )}
@@ -302,6 +344,7 @@ export function ScheduleDashboard({ user }: Props) {
                 onEdit={setEditingActivity} onDelete={handleDeleteActivity}
                 onBack={() => setView("week")} isAsleep={sleep.isAsleep}
                 selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
+                onFixWithAI={handleFixWithAI}
               />
             )}
             {view === "month" && (
@@ -328,7 +371,15 @@ export function ScheduleDashboard({ user }: Props) {
         <UnscheduledPool activities={unscheduled} onEdit={setEditingActivity} onDelete={handleDeleteActivity} compact />
       </div>
 
-      <ChatAssistant onActivityParsed={handleParseComplete} today={today} />
+      <ChatAssistant
+        onActivityParsed={handleParseComplete}
+        onActivityModified={handleActivityModified}
+        onActivityDeleted={handleActivityDeleted}
+        today={today}
+        existingActivities={scheduled}
+        fixingActivity={fixingActivity}
+        onClearFixing={() => setFixingActivity(null)}
+      />
 
       <SleepSettingsDialog open={sleepOpen} onOpenChange={setSleepOpen} settings={sleep.settings} onUpdate={sleep.update} onReset={sleep.reset} />
       <ProfileDialog user={user} open={profileOpen} onOpenChange={setProfileOpen} onThemeChange={(t) => { setSceneTheme(t); applySceneTheme(t); }} />
