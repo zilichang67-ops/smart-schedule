@@ -35,7 +35,8 @@ RULES:
 - is_recurring: boolean
 - recurrence_pattern: "DAILY", "MON,WED,FRI", etc. or null
 - recurrence_start_date/end_date: "YYYY-MM-DD" or null for date-bounded
-- If start_time given but no end_time, default end to +1 hour
+- MILESTONES: If the phrasing describes a single-point action (e.g., "leave school at 3pm", "bus arrives at 7:15", "turn in paper at midnight", "drop off homework"), set start_time AND end_time to the SAME value. Do NOT apply the 1-hour fallback. These are point-in-time events.
+- For other activities with a start time but no end time, default end to +1 hour
 - For modifications, only include fields that should change
 - Keep responses SHORT and friendly
 - Today's date is provided for context`;

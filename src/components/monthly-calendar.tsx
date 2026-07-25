@@ -74,13 +74,14 @@ export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, 
                   {dayActivities.slice(0, 4).map((a) => {
                     const bg = colorMap.get(a.id) || "hsl(240, 60%, 45%)";
                     const selected = selectedIds.has(a.id);
+                    const isMilestone = a.start_time && a.end_time && a.start_time === a.end_time;
                     return (
                       <div
                         key={a.id}
-                        className={`text-[10px] rounded px-1 py-0.5 truncate cursor-pointer hover:ring-1 hover:ring-white/20 ${
+                        className={`flex items-center gap-1 text-[10px] rounded px-1 py-0.5 truncate cursor-pointer hover:ring-1 hover:ring-white/20 ${
                           selected ? "ring-2 ring-primary" : ""
                         }`}
-                        style={{ backgroundColor: bg, color: "white" }}
+                        style={{ backgroundColor: isMilestone ? "transparent" : bg, color: isMilestone ? bg : "white" }}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (selected || e.shiftKey) {
@@ -90,6 +91,7 @@ export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, 
                           }
                         }}
                       >
+                        {isMilestone && <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: bg }} />}
                         <span className="opacity-70">{a.start_time}</span> {a.title}
                       </div>
                     );

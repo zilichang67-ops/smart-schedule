@@ -31,9 +31,10 @@ Rules:
    - recurrence_pattern: "DAILY", "MON,TUE,WED,THU,FRI", "MON,WED,FRI", "WEEKLY", or null
    - recurrence_start_date: YYYY-MM-DD for date-bounded patterns (e.g., "from Aug 1 to Sep 29"), null otherwise
    - recurrence_end_date: YYYY-MM-DD for date-bounded patterns, null otherwise
-3. If start_time given but no end_time, default end to 1 hour after start.
-4. If no time indicators, mark is_scheduled as false.
-5. Parse "4pm" → "16:00", "6-7:30pm" → start "18:00" end "19:30".
+3. MILESTONES: If the phrasing is a single-point action (e.g., "leave school at 3pm", "bus arrives at 7:15", "turn in paper at midnight"), set start_time AND end_time to the SAME value. Do NOT apply the 1-hour fallback. These are point-in-time events.
+4. For other activities with a start time but no end time, default end to 1 hour after start.
+5. If no time indicators, mark is_scheduled as false.
+6. Parse "4pm" → "16:00", "6-7:30pm" → start "18:00" end "19:30".
 6. For date-bounded recurrences like "from Aug 1 to Sep 29 every Friday 3:50pm":
    - title: extract from context
    - recurrence_pattern: "FRI"

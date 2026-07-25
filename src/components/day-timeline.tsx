@@ -84,13 +84,39 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsle
         {sorted.map((activity) => {
           const startMin = timeToMinutes(activity.start_time!);
           const endMin = timeToMinutes(activity.end_time!);
+          const isMilestone = startMin === endMin;
           const startHour = Math.floor(startMin / 60);
           const visibleIdx = visibleHours.indexOf(startHour);
           if (visibleIdx === -1) return null;
           const top = visibleIdx * HOUR_HEIGHT + ((startMin % 60) / 60) * HOUR_HEIGHT;
-          const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28);
+          const height = isMilestone ? 0 : Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28);
           const bg = colorMap.get(activity.id) || "hsl(240, 60%, 45%)";
           const selected = selectedIds.has(activity.id);
+
+          if (isMilestone) {
+            return (
+              <div key={activity.id} className="absolute group" style={{ left: 56, right: 12, top: top - 10 }}>
+                <div
+                  className={`flex items-center gap-2 cursor-pointer transition-all hover:opacity-80 ${selected ? "opacity-100" : ""}`}
+                  onClick={(e) => {
+                    if (selected || e.shiftKey) { onToggleSelect(activity.id); }
+                    else { onEdit(activity); }
+                  }}
+                >
+                  <div className="relative shrink-0">
+                    <div className="h-3 w-3 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: bg }} />
+                    <div className="absolute inset-0 h-3 w-3 rounded-full animate-ping opacity-30" style={{ backgroundColor: bg }} />
+                  </div>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[10px] font-mono opacity-60 shrink-0">{activity.start_time}</span>
+                    <span className="text-xs font-medium truncate" style={{ color: bg }}>{activity.title}</span>
+                    {activity.notes && <span className="text-[10px] text-muted-foreground truncate hidden sm:inline">· {activity.notes}</span>}
+                    {activity.is_recurring && <span className="text-[9px] bg-primary/10 text-primary rounded px-1 shrink-0">recurring</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          }
 
           return (
             <div key={activity.id} className="absolute group" style={{ left: 56, right: 12, top, height }}>
@@ -108,7 +134,7 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsle
                     <div className="flex items-center gap-2 text-xs opacity-70 mt-0.5">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {activity.start_time} - {activity.end_time}
+                        {isMilestone ? activity.start_time : `${activity.start_time} - ${activity.end_time}`}
                       </span>
                       {activity.notes && <span className="truncate">{activity.notes}</span>}
                       {activity.is_recurring && <span className="text-[10px] bg-white/20 rounded px-1">recurring</span>}

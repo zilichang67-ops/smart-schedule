@@ -113,11 +113,36 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAs
                       .map((activity) => {
                         const startMin = timeToMinutes(activity.start_time!);
                         const endMin = timeToMinutes(activity.end_time!);
-                        const durationMin = Math.max(endMin - startMin, 15);
+                        const isMilestone = startMin === endMin;
+                        const durationMin = isMilestone ? 0 : Math.max(endMin - startMin, 15);
                         const topOffset = ((startMin % 60) / 60) * HOUR_HEIGHT;
-                        const height = (durationMin / 60) * HOUR_HEIGHT;
+                        const height = isMilestone ? 0 : (durationMin / 60) * HOUR_HEIGHT;
                         const bg = colorMap.get(activity.id) || "hsl(240, 60%, 45%)";
                         const selected = selectedIds.has(activity.id);
+
+                        if (isMilestone) {
+                          return (
+                            <div
+                              key={activity.id}
+                              className="absolute left-0.5 right-0.5 flex items-center gap-1 cursor-pointer group/card"
+                              style={{ top: topOffset - 6 }}
+                              onClick={(e) => {
+                                if (selected || e.shiftKey) { onToggleSelect(activity.id); }
+                                else { onEdit(activity); }
+                              }}
+                            >
+                              <div className="h-2 w-2 rounded-full shrink-0 border border-white/50" style={{ backgroundColor: bg }} />
+                              <span className="text-[9px] font-medium truncate" style={{ color: bg }}>{activity.title}</span>
+                              <button
+                                className="opacity-0 group-hover/card:opacity-100 transition-opacity text-muted-foreground hover:text-foreground shrink-0"
+                                onClick={(e) => { e.stopPropagation(); onFixWithAI(activity); }}
+                                title="Fix with AI"
+                              >
+                                <svg className="h-2 w-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z"/></svg>
+                              </button>
+                            </div>
+                          );
+                        }
 
                         return (
                           <div
