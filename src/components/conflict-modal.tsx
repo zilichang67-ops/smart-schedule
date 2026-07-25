@@ -1,6 +1,6 @@
 "use client";
 
-import { type ConflictInfo } from "@/components/schedule-dashboard";
+import { type Activity } from "@/types/activity";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +11,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AlertTriangle } from "lucide-react";
+
+export interface ConflictInfo {
+  existing: Activity;
+  incoming: Activity;
+}
 
 interface Props {
   conflict: ConflictInfo;
@@ -28,7 +33,7 @@ export function ConflictModal({ conflict, onResolve, onClose }: Props) {
             Time Conflict
           </DialogTitle>
           <DialogDescription>
-            Two activities overlap on your timeline. What would you like to do?
+            This activity overlaps with an existing event. What would you like to do?
           </DialogDescription>
         </DialogHeader>
 
@@ -36,37 +41,25 @@ export function ConflictModal({ conflict, onResolve, onClose }: Props) {
           <div className="rounded-lg border border-border/50 p-3 space-y-1">
             <p className="text-sm font-medium">Existing: {conflict.existing.title}</p>
             <p className="text-xs text-muted-foreground">
-              {conflict.existing.start_time} - {conflict.existing.end_time}
+              {conflict.existing.activity_date} · {conflict.existing.start_time} - {conflict.existing.end_time}
             </p>
           </div>
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-1">
             <p className="text-sm font-medium">New: {conflict.incoming.title}</p>
             <p className="text-xs text-muted-foreground">
-              {conflict.incoming.start_time} - {conflict.incoming.end_time}
+              {conflict.incoming.activity_date} · {conflict.incoming.start_time} - {conflict.incoming.end_time}
             </p>
           </div>
         </div>
 
         <DialogFooter className="flex-col sm:flex-col gap-2">
-          <Button
-            onClick={() => onResolve(true)}
-            className="w-full"
-            variant="outline"
-          >
+          <Button onClick={() => onResolve(true)} className="w-full" variant="outline">
             Keep Both Activities
           </Button>
-          <Button
-            onClick={() => onResolve(false)}
-            className="w-full"
-            variant="destructive"
-          >
+          <Button onClick={() => onResolve(false)} className="w-full" variant="destructive">
             Delete Existing & Add New
           </Button>
-          <Button
-            onClick={onClose}
-            className="w-full"
-            variant="ghost"
-          >
+          <Button onClick={onClose} className="w-full" variant="ghost">
             Cancel
           </Button>
         </DialogFooter>

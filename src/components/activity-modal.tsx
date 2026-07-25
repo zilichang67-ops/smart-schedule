@@ -13,7 +13,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Trash2, Clock } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Trash2, Clock, Repeat } from "lucide-react";
 
 interface Props {
   activity: Activity;
@@ -22,14 +29,31 @@ interface Props {
   onClose: () => void;
 }
 
+const RECURRENCE_OPTIONS = [
+  { value: "never", label: "Never" },
+  { value: "DAILY", label: "Every day" },
+  { value: "MON,TUE,WED,THU,FRI", label: "Every weekday" },
+  { value: "WEEKLY", label: "Weekly (same day)" },
+  { value: "MON,WED,FRI", label: "Mon, Wed, Fri" },
+  { value: "TUE,THU", label: "Tue, Thu" },
+];
+
+function getRecurrenceValue(activity: Activity): string {
+  if (!activity.is_recurring) return "never";
+  return activity.recurrence_pattern || "WEEKLY";
+}
+
 export function ActivityModal({ activity, onSave, onDelete, onClose }: Props) {
   const [title, setTitle] = useState(activity.title);
   const [startTime, setStartTime] = useState(activity.start_time || "");
   const [endTime, setEndTime] = useState(activity.end_time || "");
   const [notes, setNotes] = useState(activity.notes || "");
   const [isScheduled, setIsScheduled] = useState(activity.is_scheduled);
+  const [activityDate, setActivityDate] = useState(activity.activity_date);
+  const [recurrence, setRecurrence] = useState(getRecurrenceValue(activity));
 
   const handleSave = () => {
+    const isRecurring = recurrence !== "never";
     onSave({
       ...activity,
       title,
@@ -37,6 +61,9 @@ export function ActivityModal({ activity, onSave, onDelete, onClose }: Props) {
       end_time: endTime || null,
       notes: notes || null,
       is_scheduled: isScheduled && !!startTime,
+      activity_date: activityDate,
+      is_recurring: isRecurring,
+      recurrence_pattern: isRecurring ? recurrence : null,
     });
   };
 
@@ -71,18 +98,28 @@ export function ActivityModal({ activity, onSave, onDelete, onClose }: Props) {
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant={isScheduled ? "default" : "outline"}
-              size="sm"
-              onClick={toggleScheduled}
-              type="button"
-            >
-              {isScheduled ? "Scheduled" : "Unscheduled"}
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              {isScheduled ? "Has a specific time" : "No specific time"}
-            </span>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                type="date"
+                value={activityDate}
+                onChange={(e) => setActivityDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>&nbsp;</Label>
+              <Button
+                variant={isScheduled ? "default" : "outline"}
+                size="sm"
+                onClick={toggleScheduled}
+                type="button"
+                className="w-full"
+              >
+                {isScheduled ? "Scheduled" : "Unscheduled"}
+              </Button>
+            </div>
           </div>
 
           {isScheduled && (
@@ -107,6 +144,25 @@ export function ActivityModal({ activity, onSave, onDelete, onClose }: Props) {
               </div>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <Repeat className="h-3.5 w-3.5" />
+              Repeat
+            </Label>
+            <Select value={recurrence} onValueChange={(v) => v && setRecurrence(v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RECURRENCE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>

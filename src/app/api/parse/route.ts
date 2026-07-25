@@ -19,6 +19,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const today = new Date().toISOString().split("T")[0];
+
     const prompt = `You are a schedule parser for a high school student. Parse the following messy daily notes into structured activities.
 
 Rules:
@@ -29,10 +31,14 @@ Rules:
    - end_time: 24-hour format "HH:MM" if mentioned, null if not
    - notes: Any extra context like "with Alex", "at the field", location info, etc. null if none
    - is_scheduled: true if the activity has a specific time, false if no time mentioned
+   - activity_date: YYYY-MM-DD format if a specific date is mentioned, null otherwise
+   - is_recurring: true if the activity repeats (e.g., "every day", "every Tuesday")
+   - recurrence_pattern: "DAILY" for every day, "MON,TUE,WED,THU,FRI" for weekdays, "MON,WED,FRI" for specific days, "WEEKLY" for same day each week, or null if not recurring
 3. If an activity has a start time but no end time, set end_time to 1 hour after start_time.
 4. If no time indicators exist at all, mark is_scheduled as false.
 5. Parse times naturally: "4pm" → "16:00", "6-7:30pm" → start "18:00" end "19:30", "sometime" → no time.
-6. Only return valid JSON, no explanations.
+6. Parse dates: "tomorrow" → compute from today (${today}), "next Monday" → compute the date, "Monday" → next occurrence.
+7. Only return valid JSON, no explanations.
 
 Return a JSON array of objects with this exact structure:
 [
@@ -41,7 +47,10 @@ Return a JSON array of objects with this exact structure:
     "start_time": "HH:MM" or null,
     "end_time": "HH:MM" or null,
     "notes": "string" or null,
-    "is_scheduled": boolean
+    "is_scheduled": boolean,
+    "activity_date": "YYYY-MM-DD" or null,
+    "is_recurring": boolean,
+    "recurrence_pattern": "string" or null
   }
 ]
 
@@ -75,6 +84,9 @@ ${text}
       end_time: a.end_time || null,
       notes: a.notes || null,
       is_scheduled: a.is_scheduled !== false && a.start_time !== null,
+      activity_date: a.activity_date || null,
+      is_recurring: a.is_recurring || false,
+      recurrence_pattern: a.recurrence_pattern || null,
     }));
 
     return NextResponse.json({ activities: validated });

@@ -4,20 +4,18 @@ import { useState, useEffect } from "react";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { type Activity } from "@/types/activity";
+import { startOfWeek, format } from "date-fns";
+import { Header } from "@/components/header";
+import { WeeklyCalendar } from "@/components/weekly-calendar";
+import { DayTimeline } from "@/components/day-timeline";
 import { InputPanel } from "@/components/input-panel";
-import { Timeline } from "@/components/timeline";
 import { UnscheduledPool } from "@/components/unscheduled-pool";
 import { ActivityModal } from "@/components/activity-modal";
-import { ConflictModal } from "@/components/conflict-modal";
-import { Header } from "@/components/header";
+import { ConflictModal, type ConflictInfo } from "@/components/conflict-modal";
+import { ChatAssistant } from "@/components/chat-assistant";
 
 interface Props {
   user: User;
-}
-
-export interface ConflictInfo {
-  existing: Activity;
-  incoming: Activity;
 }
 
 export function ScheduleDashboard({ user }: Props) {
@@ -25,8 +23,14 @@ export function ScheduleDashboard({ user }: Props) {
   const [parsing, setParsing] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [conflict, setConflict] = useState<ConflictInfo | null>(null);
-  const [pendingActivity, setPendingActivity] = useState<Activity | null>(null);
+  const [pendingActivities, setPendingActivities] = useState<Omit<Activity, "id" | "user_id" | "created_at">[]>([]);
+  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [view, setView] = useState<"week" | "day">("week");
   const supabase = createClient();
+  const today = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
     const fetch = async () => {
@@ -34,6 +38,7 @@ export function ScheduleDashboard({ user }: Props) {
         .from("activities")
         .select("*")
         .eq("user_id", user.id)
+        .order("activity_date", { ascending: true })
         .order("created_at", { ascending: true });
 
       if (data) setActivities(data);
@@ -41,112 +46,115 @@ export function ScheduleDashboard({ user }: Props) {
     fetch();
   }, [supabase, user.id]);
 
-  const checkConflict = (newActivity: Activity): boolean => {
-    const scheduled = activities.filter((a) => a.is_scheduled);
-    for (const existing of scheduled) {
-      if (!newActivity.start_time || !existing.start_time) continue;
-      if (!newActivity.end_time || !existing.end_time) continue;
-
-      const newStart = timeToMinutes(newActivity.start_time);
-      const newEnd = timeToMinutes(newActivity.end_time);
-      const existStart = timeToMinutes(existing.start_time);
-      const existEnd = timeToMinutes(existing.end_time);
-
-      if (newStart < existEnd && newEnd > existStart) {
-        setConflict({ existing, incoming: newActivity });
-        return true;
-      }
-    }
-    return false;
-  };
-
   const timeToMinutes = (t: string): number => {
     const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
   };
 
+  const checkConflict = (newAct: Activity, excludeId?: string): Activity | null => {
+    if (!newAct.start_time || !newAct.end_time || !newAct.activity_date) return null;
+    for (const existing of activities) {
+      if (excludeId && existing.id === excludeId) continue;
+      if (!existing.start_time || !existing.end_time || !existing.activity_date) continue;
+      if (existing.activity_date !== newAct.activity_date) continue;
+      if (!existing.is_scheduled || !newAct.is_scheduled) continue;
+
+      const nS = timeToMinutes(newAct.start_time);
+      const nE = timeToMinutes(newAct.end_time);
+      const eS = timeToMinutes(existing.start_time);
+      const eE = timeToMinutes(existing.end_time);
+
+      if (nS < eE && nE > eS) return existing;
+    }
+    return null;
+  };
+
   const handleParseComplete = async (parsed: Omit<Activity, "id" | "user_id" | "created_at">[]) => {
-    const newActivities: Activity[] = [];
-    let hasConflict = false;
+    const toInsert: Omit<Activity, "id" | "user_id" | "created_at">[] = [];
 
     for (const p of parsed) {
-      const activity: Activity = {
+      const base = {
         ...p,
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        created_at: new Date().toISOString(),
+        activity_date: p.activity_date || today,
+        is_recurring: p.is_recurring || false,
+        recurrence_pattern: p.recurrence_pattern || null,
+        parent_activity_id: null,
       };
 
-      if (activity.is_scheduled && activity.start_time) {
-        if (checkConflict(activity)) {
-          hasConflict = true;
-          setPendingActivity(activity);
-          break;
+      if (base.is_recurring && base.recurrence_pattern) {
+        const weekDays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+        const start = new Date(currentWeekStart);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 6);
+
+        const d = new Date(start);
+        while (d <= end) {
+          const dayName = weekDays[d.getDay() === 0 ? 6 : d.getDay() - 1];
+          if (
+            base.recurrence_pattern === "DAILY" ||
+            base.recurrence_pattern.split(",").includes(dayName)
+          ) {
+            toInsert.push({
+              ...base,
+              activity_date: format(d, "yyyy-MM-dd"),
+              is_recurring: true,
+            });
+          }
+          d.setDate(d.getDate() + 1);
         }
-      }
-
-      newActivities.push(activity);
-    }
-
-    if (newActivities.length > 0) {
-        const { data } = await supabase
-          .from("activities")
-          .insert(newActivities.map((a) => ({ user_id: a.user_id, title: a.title, start_time: a.start_time, end_time: a.end_time, notes: a.notes, is_scheduled: a.is_scheduled })))
-          .select();
-
-      if (data) {
-        setActivities((prev) => [...prev, ...data]);
+      } else {
+        toInsert.push(base);
       }
     }
 
-    if (hasConflict) return;
+    for (const act of toInsert) {
+      const conflictAct = checkConflict({
+        ...act,
+        id: "",
+        user_id: user.id,
+        created_at: "",
+      });
+      if (conflictAct) {
+        setConflict({ existing: conflictAct, incoming: { ...act, id: "pending", user_id: user.id, created_at: "" } });
+        setPendingActivities(toInsert);
+        return;
+      }
+    }
+
+    if (toInsert.length > 0) {
+      const { data } = await supabase
+        .from("activities")
+        .insert(toInsert)
+        .select();
+
+      if (data) setActivities((prev) => [...prev, ...data]);
+    }
   };
 
   const handleConflictResolve = async (keepBoth: boolean) => {
     if (!conflict) return;
 
     if (!keepBoth) {
-      await supabase
-        .from("activities")
-        .delete()
-        .eq("id", conflict.existing.id);
-
+      await supabase.from("activities").delete().eq("id", conflict.existing.id);
       setActivities((prev) => prev.filter((a) => a.id !== conflict.existing.id));
     }
 
-    if (pendingActivity) {
-      const conflictStillExists = !keepBoth
-        ? false
-        : activities.some((a) => {
-            if (a.id === pendingActivity.id || !a.start_time || !pendingActivity.start_time || !pendingActivity.end_time || !a.end_time) return false;
-            const pS = timeToMinutes(pendingActivity.start_time);
-            const pE = timeToMinutes(pendingActivity.end_time);
-            const aS = timeToMinutes(a.start_time);
-            const aE = timeToMinutes(a.end_time);
-            return pS < aE && pE > aS;
-          });
-
-      if (!conflictStillExists) {
-        const { data } = await supabase
-          .from("activities")
-          .insert({
-            user_id: user.id,
-            title: pendingActivity.title,
-            start_time: pendingActivity.start_time,
-            end_time: pendingActivity.end_time,
-            notes: pendingActivity.notes,
-            is_scheduled: pendingActivity.is_scheduled,
+    if (pendingActivities.length > 0) {
+      const remaining = keepBoth
+        ? pendingActivities.filter((a) => {
+            if (!a.start_time || !a.end_time || !a.activity_date) return true;
+            return !checkConflict({ ...a, id: "", user_id: user.id, created_at: "" });
           })
-          .select();
+        : pendingActivities;
 
-        if (data) {
-          setActivities((prev) => [...prev, ...data]);
-        }
+      if (remaining.length > 0) {
+        const { data } = await supabase.from("activities").insert(remaining).select();
+        if (data) setActivities((prev) => [...prev, ...data]);
       }
     }
 
     setConflict(null);
-    setPendingActivity(null);
+    setPendingActivities([]);
   };
 
   const handleUpdateActivity = async (updated: Activity) => {
@@ -158,38 +166,32 @@ export function ScheduleDashboard({ user }: Props) {
         end_time: updated.end_time,
         notes: updated.notes,
         is_scheduled: updated.is_scheduled,
+        activity_date: updated.activity_date,
+        is_recurring: updated.is_recurring,
+        recurrence_pattern: updated.recurrence_pattern,
       })
       .eq("id", updated.id);
 
     if (!error) {
-      setActivities((prev) =>
-        prev.map((a) => (a.id === updated.id ? updated : a))
-      );
+      setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     }
     setEditingActivity(null);
   };
 
   const handleDeleteActivity = async (id: string) => {
-    const { error } = await supabase
-      .from("activities")
-      .delete()
-      .eq("id", id);
-
-    if (!error) {
-      setActivities((prev) => prev.filter((a) => a.id !== id));
-    }
+    const { error } = await supabase.from("activities").delete().eq("id", id);
+    if (!error) setActivities((prev) => prev.filter((a) => a.id !== id));
     setEditingActivity(null);
   };
 
   const handleClearAll = async () => {
-    const { error } = await supabase
-      .from("activities")
-      .delete()
-      .eq("user_id", user.id);
+    const { error } = await supabase.from("activities").delete().eq("user_id", user.id);
+    if (!error) setActivities([]);
+  };
 
-    if (!error) {
-      setActivities([]);
-    }
+  const handleDaySelect = (day: Date) => {
+    setSelectedDay(day);
+    setView("day");
   };
 
   const scheduled = activities.filter((a) => a.is_scheduled);
@@ -197,27 +199,49 @@ export function ScheduleDashboard({ user }: Props) {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <Header user={user} onClearAll={handleClearAll} activityCount={activities.length} />
+      <Header
+        user={user}
+        onClearAll={handleClearAll}
+        activityCount={activities.length}
+        view={view}
+        onToggleView={() => {
+          if (view === "day") {
+            setView("week");
+            setSelectedDay(null);
+          } else if (selectedDay) {
+            setView("day");
+          } else {
+            setView("day");
+            setSelectedDay(new Date());
+          }
+        }}
+      />
 
       <div className="flex-1 overflow-hidden">
-        <div className="grid h-full grid-cols-1 lg:grid-cols-[340px_1fr_260px] gap-0">
-          <div className="border-r border-border/50 overflow-y-auto hidden lg:block">
-            <InputPanel
-              onParse={handleParseComplete}
-              parsing={parsing}
-              setParsing={setParsing}
-            />
+        <div className="grid h-full grid-cols-1 lg:grid-cols-[1fr_260px] gap-0">
+          <div className="overflow-hidden flex flex-col">
+            {view === "week" ? (
+              <WeeklyCalendar
+                currentWeekStart={currentWeekStart}
+                onWeekChange={setCurrentWeekStart}
+                activities={scheduled}
+                onSelectDay={handleDaySelect}
+              />
+            ) : (
+              <DayTimeline
+                date={selectedDay || new Date()}
+                activities={scheduled.filter(
+                  (a) => a.activity_date === format(selectedDay || new Date(), "yyyy-MM-dd")
+                )}
+                onEdit={setEditingActivity}
+                onDelete={handleDeleteActivity}
+                onBack={() => setView("week")}
+              />
+            )}
           </div>
 
-          <div className="overflow-y-auto">
-            <Timeline
-              activities={scheduled}
-              onEdit={setEditingActivity}
-              onDelete={handleDeleteActivity}
-            />
-          </div>
-
-          <div className="border-l border-border/50 overflow-y-auto hidden lg:block">
+          <div className="border-l border-border/50 overflow-y-auto hidden lg:flex lg:flex-col">
+            <InputPanel onParse={handleParseComplete} parsing={parsing} setParsing={setParsing} />
             <UnscheduledPool
               activities={unscheduled}
               onEdit={setEditingActivity}
@@ -228,14 +252,8 @@ export function ScheduleDashboard({ user }: Props) {
       </div>
 
       <div className="lg:hidden border-t border-border/50">
-        <InputPanel
-          onParse={handleParseComplete}
-          parsing={parsing}
-          setParsing={setParsing}
-          compact
-        />
+        <InputPanel onParse={handleParseComplete} parsing={parsing} setParsing={setParsing} compact />
       </div>
-
       <div className="lg:hidden border-t border-border/50">
         <UnscheduledPool
           activities={unscheduled}
@@ -244,6 +262,8 @@ export function ScheduleDashboard({ user }: Props) {
           compact
         />
       </div>
+
+      <ChatAssistant onActivityParsed={handleParseComplete} today={today} />
 
       {editingActivity && (
         <ActivityModal
@@ -260,7 +280,7 @@ export function ScheduleDashboard({ user }: Props) {
           onResolve={handleConflictResolve}
           onClose={() => {
             setConflict(null);
-            setPendingActivity(null);
+            setPendingActivities([]);
           }}
         />
       )}

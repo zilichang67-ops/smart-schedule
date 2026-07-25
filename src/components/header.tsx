@@ -4,15 +4,17 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, Trash2 } from "lucide-react";
+import { Zap, LogOut, Trash2, CalendarDays } from "lucide-react";
 
 interface Props {
   user: User;
   onClearAll: () => void;
   activityCount: number;
+  view: "week" | "day";
+  onToggleView: () => void;
 }
 
-export function Header({ user, onClearAll, activityCount }: Props) {
+export function Header({ user, onClearAll, activityCount, view, onToggleView }: Props) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -28,9 +30,13 @@ export function Header({ user, onClearAll, activityCount }: Props) {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
           <Zap className="h-5 w-5 text-primary" />
         </div>
-        <h1 className="text-lg font-semibold tracking-tight">Smart Schedule</h1>
+        <h1 className="text-lg font-semibold tracking-tight hidden sm:block">Smart Schedule</h1>
       </div>
       <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={onToggleView} className="text-xs gap-1.5">
+          <CalendarDays className="h-4 w-4" />
+          {view === "week" ? "Week" : "Day"}
+        </Button>
         {activityCount > 0 && (
           <Button
             variant="ghost"
@@ -39,7 +45,7 @@ export function Header({ user, onClearAll, activityCount }: Props) {
             className="text-muted-foreground hover:text-destructive"
           >
             <Trash2 className="h-4 w-4 mr-1" />
-            Clear All
+            <span className="hidden sm:inline">Clear All</span>
           </Button>
         )}
         <span className="text-sm text-muted-foreground hidden sm:inline">
