@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { type ChatMessage } from "@/types/activity";
+import { useRef, useEffect, useState } from "react";
+import { type ChatMessage, type Activity } from "@/types/activity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, Send, X, MessageCircle } from "lucide-react";
 
 interface Props {
-  onActivityParsed: (activities: Record<string, unknown>[]) => void;
+  onActivityParsed: (activities: Omit<Activity, "id" | "user_id" | "created_at">[]) => void;
   today: string;
 }
 
