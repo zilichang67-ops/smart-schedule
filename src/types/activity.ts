@@ -15,6 +15,17 @@ export interface Activity {
   recurrence_end_date: string | null;
   unscheduled_precision: string | null;
   target_date: string | null;
+  group_id: string | null;
+  reminder_trigger_minutes: number | null;
+  created_at: string;
+}
+
+export interface ActivityGroup {
+  id: string;
+  user_id: string;
+  name: string;
+  parent_group_id: string | null;
+  color_hex: string | null;
   created_at: string;
 }
 

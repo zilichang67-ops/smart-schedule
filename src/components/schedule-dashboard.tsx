@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { type Activity, type SceneThemeId } from "@/types/activity";
+import { type Activity, type ActivityGroup, type SceneThemeId } from "@/types/activity";
 import { startOfWeek, format, addDays, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useSleepSettings } from "@/hooks/use-sleep-settings";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
+import { useNotifications } from "@/hooks/use-notifications";
 import { applySceneTheme } from "@/lib/themes";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
@@ -21,6 +22,7 @@ import { ConflictModal, type ConflictInfo } from "@/components/conflict-modal";
 import { ChatAssistant } from "@/components/chat-assistant";
 import { SleepSettingsDialog } from "@/components/sleep-settings-dialog";
 import { ProfileDialog } from "@/components/profile-dialog";
+import { GroupManager } from "@/components/group-manager";
 
 interface Props {
   user: User;
@@ -43,8 +45,11 @@ export function ScheduleDashboard({ user }: Props) {
   const [sceneTheme, setSceneTheme] = useState<SceneThemeId>("indigo");
   const [bulkMode, setBulkMode] = useState(false);
   const [fixingActivity, setFixingActivity] = useState<Activity | null>(null);
+  const [groups, setGroups] = useState<ActivityGroup[]>([]);
+  const [groupManagerOpen, setGroupManagerOpen] = useState(false);
   const sleep = useSleepSettings();
   const bulk = useBulkSelection();
+  const notif = useNotifications(activities);
   const supabase = createClient();
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -90,6 +95,14 @@ export function ScheduleDashboard({ user }: Props) {
       if (data) setActivities(data);
     };
     fetch();
+  }, [supabase, user.id]);
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      const { data } = await supabase.from("activity_groups").select("*").eq("user_id", user.id).order("name");
+      if (data) setGroups(data);
+    };
+    fetchGroups();
   }, [supabase, user.id]);
 
   const timeToMinutes = (t: string): number => {
@@ -372,6 +385,9 @@ export function ScheduleDashboard({ user }: Props) {
         onPrev={handlePrev} onNext={handleNext}
         onJumpToDate={handleJumpToDate} currentDate={selectedDay || currentWeekStart}
         onOpenSettings={() => setSleepOpen(true)} onOpenProfile={() => setProfileOpen(true)}
+        onOpenGroups={() => setGroupManagerOpen(true)}
+        onRequestNotifications={notif.requestPermission}
+        notificationPermission={notif.permission}
         bulkCount={bulk.count} onBulkDelete={handleBulkDeleteSelected}
         onBulkClear={() => { bulk.clear(); setBulkMode(false); }}
         bulkMode={bulkMode} onToggleBulkMode={() => { setBulkMode(!bulkMode); bulk.clear(); }}
@@ -426,6 +442,7 @@ export function ScheduleDashboard({ user }: Props) {
               onDelete={handleDeleteActivity}
               currentMonth={monthView}
               currentDay={selectedDay || undefined}
+              groups={groups}
             />
           </div>
         </div>
@@ -435,7 +452,7 @@ export function ScheduleDashboard({ user }: Props) {
         <InputPanel onParse={handleParseComplete} parsing={parsing} setParsing={setParsing} compact />
       </div>
       <div className="lg:hidden border-t border-border/50">
-        <UnscheduledPool activities={unscheduled} onEdit={setEditingActivity} onDelete={handleDeleteActivity} compact currentMonth={monthView} currentDay={selectedDay || undefined} />
+        <UnscheduledPool activities={unscheduled} onEdit={setEditingActivity} onDelete={handleDeleteActivity} compact currentMonth={monthView} currentDay={selectedDay || undefined} groups={groups} />
       </div>
 
       <ChatAssistant
@@ -446,12 +463,14 @@ export function ScheduleDashboard({ user }: Props) {
         onBulkDelete={handleBulkDelete}
         today={today}
         existingActivities={activities}
+        existingGroups={groups}
         fixingActivity={fixingActivity}
         onClearFixing={() => setFixingActivity(null)}
       />
 
       <SleepSettingsDialog open={sleepOpen} onOpenChange={setSleepOpen} settings={sleep.settings} onUpdate={sleep.update} onReset={sleep.reset} />
       <ProfileDialog user={user} open={profileOpen} onOpenChange={setProfileOpen} onThemeChange={(t) => { setSceneTheme(t); applySceneTheme(t); }} />
+      <GroupManager user={user} open={groupManagerOpen} onOpenChange={setGroupManagerOpen} groups={groups} onGroupsChange={setGroups} />
 
       {editingActivity && (
         <ActivityModal activity={editingActivity} onSave={handleUpdateActivity} onDelete={handleDeleteActivity} onClose={() => setEditingActivity(null)} />

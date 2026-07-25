@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, Trash2, Moon, Settings, CheckSquare, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Zap, LogOut, Trash2, Moon, Settings, CheckSquare, X, ChevronLeft, ChevronRight, FolderTree, Bell } from "lucide-react";
 import { JumpToDate } from "@/components/jump-to-date";
 
 interface Props {
@@ -20,6 +20,9 @@ interface Props {
   currentDate: Date;
   onOpenSettings: () => void;
   onOpenProfile: () => void;
+  onOpenGroups: () => void;
+  onRequestNotifications: () => void;
+  notificationPermission: string;
   bulkCount: number;
   onBulkDelete: () => void;
   onBulkClear: () => void;
@@ -30,6 +33,7 @@ interface Props {
 export function Header({
   user, onClearAll, activityCount, view, onToggleView, onToday,
   onPrev, onNext, onJumpToDate, currentDate, onOpenSettings, onOpenProfile,
+  onOpenGroups, onRequestNotifications, notificationPermission,
   bulkCount, onBulkDelete, onBulkClear, bulkMode, onToggleBulkMode,
 }: Props) {
   const router = useRouter();
@@ -81,6 +85,14 @@ export function Header({
         <Button variant="ghost" size="sm" onClick={onToggleView} className="text-xs gap-1.5 h-8">
           {viewLabel}
         </Button>
+        <Button variant="ghost" size="sm" onClick={onOpenGroups} className="h-8 gap-1.5" title="Groups">
+          <FolderTree className="h-4 w-4" />
+        </Button>
+        {notificationPermission !== "granted" && (
+          <Button variant="ghost" size="sm" onClick={onRequestNotifications} className="h-8 gap-1.5" title="Enable reminders">
+            <Bell className="h-4 w-4" />
+          </Button>
+        )}
         <Button variant="ghost" size="sm" onClick={onToggleBulkMode} className={`h-8 gap-1.5 ${bulkMode ? "text-primary" : ""}`}>
           <CheckSquare className="h-4 w-4" />
         </Button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { type ChatMessage, type Activity } from "@/types/activity";
+import { type ChatMessage, type Activity, type ActivityGroup } from "@/types/activity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +12,10 @@ interface Props {
   onActivityModified: (targetTitle: string, targetDate: string, updates: Record<string, unknown>) => void;
   onActivityDeleted: (targetTitle: string, targetDate: string) => void;
   onScheduleUnscheduled: (targetTitle: string, targetDate: string, updates: Record<string, unknown>) => void;
-  onBulkDelete: (filter: { date?: string | null; title?: string | null; unscheduled_only?: boolean | null }) => void;
+  onBulkDelete: (filter: { date?: string | null; title?: string | null; unscheduled_only?: boolean | null; group_id?: string | null }) => void;
   today: string;
   existingActivities: Activity[];
+  existingGroups: ActivityGroup[];
   fixingActivity?: Activity | null;
   onClearFixing?: () => void;
 }
@@ -27,7 +28,7 @@ const WELCOME: ChatMessage = {
 export function ChatAssistant({
   onActivityParsed, onActivityModified, onActivityDeleted,
   onScheduleUnscheduled, onBulkDelete,
-  today, existingActivities, fixingActivity, onClearFixing,
+  today, existingActivities, existingGroups, fixingActivity, onClearFixing,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [input, setInput] = useState("");
@@ -56,6 +57,7 @@ export function ChatAssistant({
           messages: newMsgs,
           today,
           existingActivities,
+          existingGroups,
         }),
       });
 
@@ -85,7 +87,7 @@ export function ChatAssistant({
       setLoading(false);
       onClearFixing?.();
     }
-  }, [today, existingActivities, onActivityParsed, onActivityModified, onActivityDeleted, onScheduleUnscheduled, onBulkDelete, onClearFixing]);
+  }, [today, existingActivities, existingGroups, onActivityParsed, onActivityModified, onActivityDeleted, onScheduleUnscheduled, onBulkDelete, onClearFixing]);
 
   useEffect(() => {
     if (fixingActivity && open && fixingRef.current !== fixingActivity.id) {
