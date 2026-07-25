@@ -1,4 +1,4 @@
-export type Locale = "en" | "vi";
+export type Locale = "en" | "zh" | "hi" | "es";
 export type UserRole = "student" | "worker";
 
 export interface Translations {

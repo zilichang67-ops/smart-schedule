@@ -1,14 +1,9 @@
 "use client";
 
 import { useI18n } from "@/i18n/context";
-import { type Locale } from "@/i18n/en";
+import { LANGUAGES } from "@/i18n/languages";
 import { Button } from "@/components/ui/button";
 import { Globe } from "lucide-react";
-
-const LANGUAGES: { code: Locale; label: string; flag: string }[] = [
-  { code: "en", label: "English", flag: "🇺🇸" },
-  { code: "vi", label: "Tiếng Việt", flag: "🇻🇳" },
-];
 
 export function LanguageSwitcher() {
   const { locale, setLocale } = useI18n();

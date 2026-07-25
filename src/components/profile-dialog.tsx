@@ -138,30 +138,26 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange, onRoleC
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-2">
-                <button
-                  className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
-                    preferredLang === "en"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border/50 hover:border-border"
-                  }`}
-                  onClick={() => setPreferredLang("en")}
-                >
-                  <span>🇺🇸</span>
-                  <span className="flex-1 text-left">English</span>
-                  {preferredLang === "en" && <Check className="h-4 w-4" />}
-                </button>
-                <button
-                  className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
-                    preferredLang === "vi"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border/50 hover:border-border"
-                  }`}
-                  onClick={() => setPreferredLang("vi")}
-                >
-                  <span>🇻🇳</span>
-                  <span className="flex-1 text-left">Tiếng Việt</span>
-                  {preferredLang === "vi" && <Check className="h-4 w-4" />}
-                </button>
+                {[
+                  { code: "en" as Locale, flag: "🇺🇸", label: "English" },
+                  { code: "zh" as Locale, flag: "🇨🇳", label: "中文" },
+                  { code: "hi" as Locale, flag: "🇮🇳", label: "हिन्दी" },
+                  { code: "es" as Locale, flag: "🇪🇸", label: "Español" },
+                ].map((lang) => (
+                  <button
+                    key={lang.code}
+                    className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                      preferredLang === lang.code
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border/50 hover:border-border"
+                    }`}
+                    onClick={() => setPreferredLang(lang.code)}
+                  >
+                    <span>{lang.flag}</span>
+                    <span className="flex-1 text-left">{lang.label}</span>
+                    {preferredLang === lang.code && <Check className="h-4 w-4" />}
+                  </button>
+                ))}
               </div>
             </CardContent>
           </Card>

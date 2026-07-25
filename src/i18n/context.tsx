@@ -2,9 +2,11 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { type Locale, type Translations, en } from "./en";
-import { vi } from "./vi";
+import { zh } from "./zh";
+import { hi } from "./hi";
+import { es } from "./es";
 
-const translations: Record<Locale, Translations> = { en, vi };
+const translations: Record<Locale, Translations> = { en, zh, hi, es };
 
 function getInitialLocale(): Locale {
   if (typeof window !== "undefined") {
