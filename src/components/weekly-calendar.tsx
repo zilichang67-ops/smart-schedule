@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import {
   endOfWeek,
+  startOfWeek,
   addWeeks,
   subWeeks,
   format,
@@ -86,7 +87,7 @@ export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onS
           <Button variant="ghost" size="sm" onClick={() => onWeekChange(subWeeks(currentWeekStart, 1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onWeekChange(new Date())} className="text-xs">
+          <Button variant="ghost" size="sm" onClick={() => onWeekChange(startOfWeek(new Date(), { weekStartsOn: 1 }))} className="text-xs">
             Today
           </Button>
           <Button variant="ghost" size="sm" onClick={() => onWeekChange(addWeeks(currentWeekStart, 1))}>
