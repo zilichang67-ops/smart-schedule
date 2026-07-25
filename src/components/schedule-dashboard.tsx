@@ -3,18 +3,23 @@
 import { useState, useEffect } from "react";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { type Activity } from "@/types/activity";
+import { type Activity, type SceneThemeId } from "@/types/activity";
 import { startOfWeek, format } from "date-fns";
 import { useSleepSettings } from "@/hooks/use-sleep-settings";
+import { useBulkSelection } from "@/hooks/use-bulk-selection";
+import { applySceneTheme } from "@/lib/themes";
+import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { WeeklyCalendar } from "@/components/weekly-calendar";
 import { DayTimeline } from "@/components/day-timeline";
+import { MonthlyCalendar } from "@/components/monthly-calendar";
 import { InputPanel } from "@/components/input-panel";
 import { UnscheduledPool } from "@/components/unscheduled-pool";
 import { ActivityModal } from "@/components/activity-modal";
 import { ConflictModal, type ConflictInfo } from "@/components/conflict-modal";
 import { ChatAssistant } from "@/components/chat-assistant";
 import { SleepSettingsDialog } from "@/components/sleep-settings-dialog";
+import { ProfileDialog } from "@/components/profile-dialog";
 
 interface Props {
   user: User;
@@ -30,16 +35,35 @@ export function ScheduleDashboard({ user }: Props) {
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [view, setView] = useState<"week" | "day">("week");
+  const [view, setView] = useState<"week" | "day" | "month">("week");
   const [sleepOpen, setSleepOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [sceneTheme, setSceneTheme] = useState<SceneThemeId>("indigo");
+  const [bulkMode, setBulkMode] = useState(false);
   const sleep = useSleepSettings();
+  const bulk = useBulkSelection();
   const supabase = createClient();
+  const today = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
     sleep.init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const today = format(new Date(), "yyyy-MM-dd");
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const { data } = await supabase.from("user_profiles").select("scene_color_theme").eq("id", user.id).single();
+      if (data) {
+        setSceneTheme(data.scene_color_theme as SceneThemeId);
+        applySceneTheme(data.scene_color_theme as SceneThemeId);
+      }
+    };
+    loadProfile();
+  }, [supabase, user.id]);
+
+  useEffect(() => {
+    applySceneTheme(sceneTheme);
+  }, [sceneTheme]);
 
   useEffect(() => {
     const fetch = async () => {
@@ -49,7 +73,6 @@ export function ScheduleDashboard({ user }: Props) {
         .eq("user_id", user.id)
         .order("activity_date", { ascending: true })
         .order("created_at", { ascending: true });
-
       if (data) setActivities(data);
     };
     fetch();
@@ -60,22 +83,38 @@ export function ScheduleDashboard({ user }: Props) {
     return h * 60 + m;
   };
 
-  const checkConflict = (newAct: Activity, excludeId?: string): Activity | null => {
+  const checkConflict = (newAct: Activity): Activity | null => {
     if (!newAct.start_time || !newAct.end_time || !newAct.activity_date) return null;
     for (const existing of activities) {
-      if (excludeId && existing.id === excludeId) continue;
+      if (existing.id === newAct.id) continue;
       if (!existing.start_time || !existing.end_time || !existing.activity_date) continue;
-      if (existing.activity_date !== newAct.activity_date) continue;
-      if (!existing.is_scheduled || !newAct.is_scheduled) continue;
-
-      const nS = timeToMinutes(newAct.start_time);
-      const nE = timeToMinutes(newAct.end_time);
-      const eS = timeToMinutes(existing.start_time);
-      const eE = timeToMinutes(existing.end_time);
-
+      if (existing.activity_date !== newAct.activity_date || !existing.is_scheduled || !newAct.is_scheduled) continue;
+      const nS = timeToMinutes(newAct.start_time), nE = timeToMinutes(newAct.end_time);
+      const eS = timeToMinutes(existing.start_time), eE = timeToMinutes(existing.end_time);
       if (nS < eE && nE > eS) return existing;
     }
     return null;
+  };
+
+  const expandDateBounded = (base: Omit<Activity, "id" | "user_id" | "created_at">): Omit<Activity, "id" | "user_id" | "created_at">[] => {
+    if (!base.is_recurring || !base.recurrence_pattern) return [base];
+    if (!base.recurrence_start_date || !base.recurrence_end_date) return [base];
+
+    const instances: Omit<Activity, "id" | "user_id" | "created_at">[] = [];
+    const start = new Date(base.recurrence_start_date);
+    const end = new Date(base.recurrence_end_date);
+    const dayMap = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+    const patterns = base.recurrence_pattern.split(",");
+
+    const d = new Date(start);
+    while (d <= end) {
+      const dayName = dayMap[d.getDay()];
+      if (patterns.includes(dayName) || base.recurrence_pattern === "DAILY") {
+        instances.push({ ...base, activity_date: format(d, "yyyy-MM-dd") });
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    return instances.length > 0 ? instances : [base];
   };
 
   const handleParseComplete = async (parsed: Omit<Activity, "id" | "user_id" | "created_at">[]) => {
@@ -88,41 +127,15 @@ export function ScheduleDashboard({ user }: Props) {
         is_recurring: p.is_recurring || false,
         recurrence_pattern: p.recurrence_pattern || null,
         parent_activity_id: null,
+        color_hex: null,
+        recurrence_start_date: p.recurrence_start_date || null,
+        recurrence_end_date: p.recurrence_end_date || null,
       };
-
-      if (base.is_recurring && base.recurrence_pattern) {
-        const weekDays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-        const start = new Date(currentWeekStart);
-        const end = new Date(start);
-        end.setDate(end.getDate() + 6);
-
-        const d = new Date(start);
-        while (d <= end) {
-          const dayName = weekDays[d.getDay() === 0 ? 6 : d.getDay() - 1];
-          if (
-            base.recurrence_pattern === "DAILY" ||
-            base.recurrence_pattern.split(",").includes(dayName)
-          ) {
-            toInsert.push({
-              ...base,
-              activity_date: format(d, "yyyy-MM-dd"),
-              is_recurring: true,
-            });
-          }
-          d.setDate(d.getDate() + 1);
-        }
-      } else {
-        toInsert.push(base);
-      }
+      toInsert.push(...expandDateBounded(base));
     }
 
     for (const act of toInsert) {
-      const conflictAct = checkConflict({
-        ...act,
-        id: "",
-        user_id: user.id,
-        created_at: "",
-      });
+      const conflictAct = checkConflict({ ...act, id: "", user_id: user.id, created_at: "" });
       if (conflictAct) {
         setConflict({ existing: conflictAct, incoming: { ...act, id: "pending", user_id: user.id, created_at: "" } });
         setPendingActivities(toInsert);
@@ -131,59 +144,37 @@ export function ScheduleDashboard({ user }: Props) {
     }
 
     if (toInsert.length > 0) {
-      const { data } = await supabase
-        .from("activities")
-        .insert(toInsert)
-        .select();
-
+      const { data } = await supabase.from("activities").insert(toInsert).select();
       if (data) setActivities((prev) => [...prev, ...data]);
     }
   };
 
   const handleConflictResolve = async (keepBoth: boolean) => {
     if (!conflict) return;
-
     if (!keepBoth) {
       await supabase.from("activities").delete().eq("id", conflict.existing.id);
       setActivities((prev) => prev.filter((a) => a.id !== conflict.existing.id));
     }
-
     if (pendingActivities.length > 0) {
       const remaining = keepBoth
-        ? pendingActivities.filter((a) => {
-            if (!a.start_time || !a.end_time || !a.activity_date) return true;
-            return !checkConflict({ ...a, id: "", user_id: user.id, created_at: "" });
-          })
+        ? pendingActivities.filter((a) => !a.start_time || !a.end_time || !a.activity_date || !checkConflict({ ...a, id: "", user_id: user.id, created_at: "" }))
         : pendingActivities;
-
       if (remaining.length > 0) {
         const { data } = await supabase.from("activities").insert(remaining).select();
         if (data) setActivities((prev) => [...prev, ...data]);
       }
     }
-
     setConflict(null);
     setPendingActivities([]);
   };
 
   const handleUpdateActivity = async (updated: Activity) => {
-    const { error } = await supabase
-      .from("activities")
-      .update({
-        title: updated.title,
-        start_time: updated.start_time,
-        end_time: updated.end_time,
-        notes: updated.notes,
-        is_scheduled: updated.is_scheduled,
-        activity_date: updated.activity_date,
-        is_recurring: updated.is_recurring,
-        recurrence_pattern: updated.recurrence_pattern,
-      })
-      .eq("id", updated.id);
-
-    if (!error) {
-      setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-    }
+    const { error } = await supabase.from("activities").update({
+      title: updated.title, start_time: updated.start_time, end_time: updated.end_time,
+      notes: updated.notes, is_scheduled: updated.is_scheduled, activity_date: updated.activity_date,
+      is_recurring: updated.is_recurring, recurrence_pattern: updated.recurrence_pattern,
+    }).eq("id", updated.id);
+    if (!error) setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     setEditingActivity(null);
   };
 
@@ -193,72 +184,89 @@ export function ScheduleDashboard({ user }: Props) {
     setEditingActivity(null);
   };
 
+  const handleBulkDelete = async () => {
+    const ids = Array.from(bulk.selectedIds);
+    if (ids.length === 0) return;
+    const { error } = await supabase.from("activities").delete().in("id", ids);
+    if (!error) {
+      setActivities((prev) => prev.filter((a) => !bulk.selectedIds.has(a.id)));
+      bulk.clear();
+      setBulkMode(false);
+    }
+  };
+
   const handleClearAll = async () => {
     const { error } = await supabase.from("activities").delete().eq("user_id", user.id);
     if (!error) setActivities([]);
   };
 
-  const handleDaySelect = (day: Date) => {
-    setSelectedDay(day);
-    setView("day");
+  const handleDaySelect = (day: Date) => { setSelectedDay(day); setView("day"); };
+
+  const cycleView = () => {
+    const order: Array<"week" | "day" | "month"> = ["week", "day", "month"];
+    const idx = order.indexOf(view);
+    const next = order[(idx + 1) % order.length];
+    setView(next);
+    if (next === "day" && !selectedDay) setSelectedDay(new Date());
+    if (next === "week") setSelectedDay(null);
   };
 
   const scheduled = activities.filter((a) => a.is_scheduled);
   const unscheduled = activities.filter((a) => !a.is_scheduled);
+  const allSelectableIds = scheduled.map((a) => a.id);
 
   return (
     <div className="flex h-screen flex-col bg-background">
       <Header
-        user={user}
-        onClearAll={handleClearAll}
-        activityCount={activities.length}
-        view={view}
-        onToggleView={() => {
-          if (view === "day") {
-            setView("week");
-            setSelectedDay(null);
-          } else if (selectedDay) {
-            setView("day");
-          } else {
-            setView("day");
-            setSelectedDay(new Date());
-          }
-        }}
-        onOpenSettings={() => setSleepOpen(true)}
+        user={user} onClearAll={handleClearAll} activityCount={activities.length}
+        view={view} onToggleView={cycleView}
+        onOpenSettings={() => setSleepOpen(true)} onOpenProfile={() => setProfileOpen(true)}
+        bulkCount={bulk.count} onBulkDelete={handleBulkDelete}
+        onBulkClear={() => { bulk.clear(); setBulkMode(false); }}
+        bulkMode={bulkMode} onToggleBulkMode={() => { setBulkMode(!bulkMode); bulk.clear(); }}
       />
+
+      {bulkMode && (
+        <div className="px-4 py-2 border-b border-border/50 bg-muted/20 flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Click activities to select, then delete</span>
+          <Button variant="ghost" size="sm" onClick={() => bulk.toggleAll(allSelectableIds)} className="text-xs">
+            {bulk.count === allSelectableIds.length ? "Deselect All" : "Select All Scheduled"}
+          </Button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden">
         <div className="grid h-full grid-cols-1 lg:grid-cols-[1fr_260px] gap-0">
           <div className="overflow-hidden flex flex-col">
-            {view === "week" ? (
+            {view === "week" && (
               <WeeklyCalendar
-                currentWeekStart={currentWeekStart}
-                onWeekChange={setCurrentWeekStart}
-                activities={scheduled}
-                onSelectDay={handleDaySelect}
-                isAsleep={sleep.isAsleep}
+                currentWeekStart={currentWeekStart} onWeekChange={setCurrentWeekStart}
+                activities={scheduled} onSelectDay={handleDaySelect} isAsleep={sleep.isAsleep}
+                onEdit={setEditingActivity} selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle}
+                sceneTheme={sceneTheme}
               />
-            ) : (
+            )}
+            {view === "day" && (
               <DayTimeline
                 date={selectedDay || new Date()}
-                activities={scheduled.filter(
-                  (a) => a.activity_date === format(selectedDay || new Date(), "yyyy-MM-dd")
-                )}
-                onEdit={setEditingActivity}
-                onDelete={handleDeleteActivity}
-                onBack={() => setView("week")}
-                isAsleep={sleep.isAsleep}
+                activities={scheduled.filter((a) => a.activity_date === format(selectedDay || new Date(), "yyyy-MM-dd"))}
+                onEdit={setEditingActivity} onDelete={handleDeleteActivity}
+                onBack={() => setView("week")} isAsleep={sleep.isAsleep}
+                selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
+              />
+            )}
+            {view === "month" && (
+              <MonthlyCalendar
+                activities={scheduled} onSelectDay={handleDaySelect}
+                onEdit={setEditingActivity} selectedIds={bulk.selectedIds}
+                onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
               />
             )}
           </div>
 
           <div className="border-l border-border/50 overflow-y-auto hidden lg:flex lg:flex-col">
             <InputPanel onParse={handleParseComplete} parsing={parsing} setParsing={setParsing} />
-            <UnscheduledPool
-              activities={unscheduled}
-              onEdit={setEditingActivity}
-              onDelete={handleDeleteActivity}
-            />
+            <UnscheduledPool activities={unscheduled} onEdit={setEditingActivity} onDelete={handleDeleteActivity} />
           </div>
         </div>
       </div>
@@ -267,42 +275,20 @@ export function ScheduleDashboard({ user }: Props) {
         <InputPanel onParse={handleParseComplete} parsing={parsing} setParsing={setParsing} compact />
       </div>
       <div className="lg:hidden border-t border-border/50">
-        <UnscheduledPool
-          activities={unscheduled}
-          onEdit={setEditingActivity}
-          onDelete={handleDeleteActivity}
-          compact
-        />
+        <UnscheduledPool activities={unscheduled} onEdit={setEditingActivity} onDelete={handleDeleteActivity} compact />
       </div>
 
       <ChatAssistant onActivityParsed={handleParseComplete} today={today} />
 
-      <SleepSettingsDialog
-        open={sleepOpen}
-        onOpenChange={setSleepOpen}
-        settings={sleep.settings}
-        onUpdate={sleep.update}
-        onReset={sleep.reset}
-      />
+      <SleepSettingsDialog open={sleepOpen} onOpenChange={setSleepOpen} settings={sleep.settings} onUpdate={sleep.update} onReset={sleep.reset} />
+      <ProfileDialog user={user} open={profileOpen} onOpenChange={setProfileOpen} onThemeChange={(t) => { setSceneTheme(t); applySceneTheme(t); }} />
 
       {editingActivity && (
-        <ActivityModal
-          activity={editingActivity}
-          onSave={handleUpdateActivity}
-          onDelete={handleDeleteActivity}
-          onClose={() => setEditingActivity(null)}
-        />
+        <ActivityModal activity={editingActivity} onSave={handleUpdateActivity} onDelete={handleDeleteActivity} onClose={() => setEditingActivity(null)} />
       )}
 
       {conflict && (
-        <ConflictModal
-          conflict={conflict}
-          onResolve={handleConflictResolve}
-          onClose={() => {
-            setConflict(null);
-            setPendingActivities([]);
-          }}
-        />
+        <ConflictModal conflict={conflict} onResolve={handleConflictResolve} onClose={() => { setConflict(null); setPendingActivities([]); }} />
       )}
     </div>
   );

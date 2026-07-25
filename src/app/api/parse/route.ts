@@ -13,13 +13,8 @@ export async function POST(request: Request) {
     const { text } = await request.json();
 
     if (!text || typeof text !== "string") {
-      return NextResponse.json(
-        { error: "Please provide text to parse." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Please provide text to parse." }, { status: 400 });
     }
-
-    const today = new Date().toISOString().split("T")[0];
 
     const prompt = `You are a schedule parser for a high school student. Parse the following messy daily notes into structured activities.
 
@@ -29,30 +24,31 @@ Rules:
    - title: A clean, concise activity name
    - start_time: 24-hour format "HH:MM" if mentioned, null if not
    - end_time: 24-hour format "HH:MM" if mentioned, null if not
-   - notes: Any extra context like "with Alex", "at the field", location info, etc. null if none
-   - is_scheduled: true if the activity has a specific time, false if no time mentioned
-   - activity_date: YYYY-MM-DD format if a specific date is mentioned, null otherwise
-   - is_recurring: true if the activity repeats (e.g., "every day", "every Tuesday")
-   - recurrence_pattern: "DAILY" for every day, "MON,TUE,WED,THU,FRI" for weekdays, "MON,WED,FRI" for specific days, "WEEKLY" for same day each week, or null if not recurring
-3. If an activity has a start time but no end time, set end_time to 1 hour after start_time.
-4. If no time indicators exist at all, mark is_scheduled as false.
-5. Parse times naturally: "4pm" → "16:00", "6-7:30pm" → start "18:00" end "19:30", "sometime" → no time.
-6. Parse dates: "tomorrow" → compute from today (${today}), "next Monday" → compute the date, "Monday" → next occurrence.
+   - notes: Extra context like "with Alex", "at the field", etc. null if none
+   - is_scheduled: true if the activity has a specific time, false otherwise
+   - activity_date: YYYY-MM-DD if a specific date is mentioned, null otherwise
+   - is_recurring: true if the activity repeats
+   - recurrence_pattern: "DAILY", "MON,TUE,WED,THU,FRI", "MON,WED,FRI", "WEEKLY", or null
+   - recurrence_start_date: YYYY-MM-DD for date-bounded patterns (e.g., "from Aug 1 to Sep 29"), null otherwise
+   - recurrence_end_date: YYYY-MM-DD for date-bounded patterns, null otherwise
+3. If start_time given but no end_time, default end to 1 hour after start.
+4. If no time indicators, mark is_scheduled as false.
+5. Parse "4pm" → "16:00", "6-7:30pm" → start "18:00" end "19:30".
+6. For date-bounded recurrences like "from Aug 1 to Sep 29 every Friday 3:50pm":
+   - title: extract from context
+   - recurrence_pattern: "FRI"
+   - start_time: "15:50", end_time: "16:50"
+   - recurrence_start_date: "YYYY-MM-DD"
+   - recurrence_end_date: "YYYY-MM-DD"
 7. Only return valid JSON, no explanations.
 
-Return a JSON array of objects with this exact structure:
-[
-  {
-    "title": "string",
-    "start_time": "HH:MM" or null,
-    "end_time": "HH:MM" or null,
-    "notes": "string" or null,
-    "is_scheduled": boolean,
-    "activity_date": "YYYY-MM-DD" or null,
-    "is_recurring": boolean,
-    "recurrence_pattern": "string" or null
-  }
-]
+Return a JSON array:
+[{
+  "title": "string", "start_time": "HH:MM" or null, "end_time": "HH:MM" or null,
+  "notes": "string" or null, "is_scheduled": boolean, "activity_date": "YYYY-MM-DD" or null,
+  "is_recurring": boolean, "recurrence_pattern": "string" or null,
+  "recurrence_start_date": "YYYY-MM-DD" or null, "recurrence_end_date": "YYYY-MM-DD" or null
+}]
 
 Student notes:
 """
@@ -70,10 +66,7 @@ ${text}
 
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      return NextResponse.json(
-        { error: "Failed to parse AI response." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to parse AI response." }, { status: 500 });
     }
 
     const activities: ParsedActivity[] = JSON.parse(jsonMatch[0]);
@@ -87,14 +80,13 @@ ${text}
       activity_date: a.activity_date || null,
       is_recurring: a.is_recurring || false,
       recurrence_pattern: a.recurrence_pattern || null,
+      recurrence_start_date: a.recurrence_start_date || null,
+      recurrence_end_date: a.recurrence_end_date || null,
     }));
 
     return NextResponse.json({ activities: validated });
   } catch (error) {
     console.error("Parse error:", error);
-    return NextResponse.json(
-      { error: "Failed to parse schedule. Please try again." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to parse schedule. Please try again." }, { status: 500 });
   }
 }

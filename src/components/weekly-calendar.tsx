@@ -10,7 +10,8 @@ import {
   isSameDay,
   isToday,
 } from "date-fns";
-import { type Activity } from "@/types/activity";
+import { type Activity, type SceneThemeId } from "@/types/activity";
+import { getAdjacentColors } from "@/lib/themes";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 
@@ -20,6 +21,10 @@ interface Props {
   activities: Activity[];
   onSelectDay: (date: Date) => void;
   isAsleep: (hour: number) => boolean;
+  onEdit: (a: Activity) => void;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
+  sceneTheme: SceneThemeId;
 }
 
 const HOUR_HEIGHT = 48;
@@ -36,17 +41,7 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
-const DAY_COLORS = [
-  "bg-indigo-500/20 border-indigo-500/40",
-  "bg-violet-500/20 border-violet-500/40",
-  "bg-purple-500/20 border-purple-500/40",
-  "bg-blue-500/20 border-blue-500/40",
-  "bg-cyan-500/20 border-cyan-500/40",
-  "bg-emerald-500/20 border-emerald-500/40",
-  "bg-amber-500/20 border-amber-500/40",
-];
-
-export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onSelectDay, isAsleep }: Props) {
+export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onSelectDay, isAsleep, onEdit, selectedIds, onToggleSelect, sceneTheme }: Props) {
   const days = useMemo(() => {
     const end = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
     return eachDayOfInterval({ start: currentWeekStart, end });
@@ -62,6 +57,11 @@ export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onS
     return hours;
   }, [isAsleep]);
 
+  const colorMap = useMemo(
+    () => getAdjacentColors(activities.map((a) => ({ id: a.id, activity_date: a.activity_date, start_time: a.start_time })), sceneTheme),
+    [activities, sceneTheme]
+  );
+
   const getActivitiesForDay = (day: Date) =>
     activities.filter(
       (a) =>
@@ -73,7 +73,7 @@ export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onS
         !isAsleep(timeToMinutes(a.start_time) / 60)
     );
 
-    return (
+  return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card/30">
         <div className="flex items-center gap-3">
@@ -101,77 +101,56 @@ export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onS
           {days.map((day, i) => (
             <div
               key={i}
-              className={`border-r border-border/30 text-center py-2 cursor-pointer hover:bg-muted/30 transition-colors ${
-                isToday(day) ? "bg-primary/5" : ""
-              }`}
+              className={`border-r border-border/30 text-center py-2 cursor-pointer hover:bg-muted/30 transition-colors ${isToday(day) ? "bg-primary/5" : ""}`}
               onClick={() => onSelectDay(day)}
             >
               <div className="text-xs text-muted-foreground">{format(day, "EEE")}</div>
-              <div className={`text-lg font-medium ${isToday(day) ? "text-primary" : ""}`}>
-                {format(day, "d")}
-              </div>
+              <div className={`text-lg font-medium ${isToday(day) ? "text-primary" : ""}`}>{format(day, "d")}</div>
             </div>
           ))}
 
           {visibleHours.map((hour) => (
-            <HourRow
-              key={hour}
-              hour={hour}
-              days={days}
-              getActivitiesForDay={getActivitiesForDay}
-            />
+            <div key={hour} className="contents">
+              <div className="border-r border-t border-border/30 relative" style={{ height: HOUR_HEIGHT }}>
+                <span className="absolute -top-2 right-1 text-[10px] text-muted-foreground">{formatHour(hour)}</span>
+              </div>
+              {days.map((day, di) => {
+                const dayActivities = getActivitiesForDay(day);
+                return (
+                  <div key={di} className="border-r border-t border-border/20 relative" style={{ height: HOUR_HEIGHT }}>
+                    {dayActivities
+                      .filter((a) => Math.floor(timeToMinutes(a.start_time!) / 60) === hour)
+                      .map((activity) => {
+                        const startMin = timeToMinutes(activity.start_time!);
+                        const endMin = timeToMinutes(activity.end_time!);
+                        const durationMin = Math.max(endMin - startMin, 15);
+                        const topOffset = ((startMin % 60) / 60) * HOUR_HEIGHT;
+                        const height = (durationMin / 60) * HOUR_HEIGHT;
+                        const bg = colorMap.get(activity.id) || "hsl(240, 60%, 45%)";
+                        const selected = selectedIds.has(activity.id);
+
+                        return (
+                          <div
+                            key={activity.id}
+                            className={`absolute left-0.5 right-0.5 rounded px-1.5 py-0.5 border-l-2 cursor-pointer hover:ring-2 hover:ring-white/30 overflow-hidden transition-all ${selected ? "ring-2 ring-primary" : ""}`}
+                            style={{ top: topOffset, height: Math.max(height, 18), backgroundColor: bg, color: "white", borderLeftColor: "rgba(255,255,255,0.3)" }}
+                            onClick={(e) => {
+                              if (selected || e.shiftKey) { onToggleSelect(activity.id); }
+                              else { onEdit(activity); }
+                            }}
+                          >
+                            <p className="text-[10px] font-medium truncate">{activity.title}</p>
+                            <p className="text-[9px] opacity-70 truncate">{activity.start_time}-{activity.end_time}</p>
+                          </div>
+                        );
+                      })}
+                  </div>
+                );
+              })}
+            </div>
           ))}
         </div>
       </div>
     </div>
-  );
-}
-
-function HourRow({
-  hour,
-  days,
-  getActivitiesForDay,
-}: {
-  hour: number;
-  days: Date[];
-  getActivitiesForDay: (day: Date) => Activity[];
-}) {
-  return (
-    <>
-      <div className="border-r border-t border-border/30 relative" style={{ height: HOUR_HEIGHT }}>
-        <span className="absolute -top-2 right-1 text-[10px] text-muted-foreground">
-          {formatHour(hour)}
-        </span>
-      </div>
-      {days.map((day, di) => {
-        const dayActivities = getActivitiesForDay(day);
-        return (
-          <div key={di} className="border-r border-t border-border/20 relative" style={{ height: HOUR_HEIGHT }}>
-            {dayActivities
-              .filter((a) => Math.floor(timeToMinutes(a.start_time!) / 60) === hour)
-              .map((activity) => {
-                const startMin = timeToMinutes(activity.start_time!);
-                const endMin = timeToMinutes(activity.end_time!);
-                const durationMin = Math.max(endMin - startMin, 15);
-                const topOffset = ((startMin % 60) / 60) * HOUR_HEIGHT;
-                const height = (durationMin / 60) * HOUR_HEIGHT;
-
-                return (
-                  <div
-                    key={activity.id}
-                    className={`absolute left-0.5 right-0.5 rounded px-1.5 py-0.5 border-l-2 cursor-pointer hover:ring-1 hover:ring-primary/50 overflow-hidden ${DAY_COLORS[di]}`}
-                    style={{ top: topOffset, height: Math.max(height, 18) }}
-                  >
-                    <p className="text-[10px] font-medium truncate">{activity.title}</p>
-                    <p className="text-[9px] opacity-70 truncate">
-                      {activity.start_time}-{activity.end_time}
-                    </p>
-                  </div>
-                );
-              })}
-          </div>
-        );
-      })}
-    </>
   );
 }

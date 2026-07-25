@@ -18,42 +18,47 @@ When a user sends you a message, evaluate if you have enough information to crea
 - notes (extra context)
 - is_recurring (boolean)
 - recurrence_pattern (e.g., "DAILY", "WEEKLY", "MON,WED,FRI", or null)
+- recurrence_start_date (YYYY-MM-DD or null - when recurrence begins)
+- recurrence_end_date (YYYY-MM-DD or null - when recurrence ends)
 
-RULES FOR YOUR RESPONSE:
-1. If you have ALL the info needed (at minimum a title), respond with a JSON block wrapped in \`\`\`json\n...\n\`\`\` containing:
+RULES:
+1. If you have ALL the info (at minimum a title), respond with JSON in \`\`\`json\n...\n\`\`\`:
    {
      "action": "create_activity",
-     "activities": [{ "title": "...", "activity_date": "YYYY-MM-DD" or null, "start_time": "HH:MM" or null, "end_time": "HH:MM" or null, "notes": "..." or null, "is_recurring": boolean, "recurrence_pattern": "..." or null }],
-     "message": "Brief confirmation of what you're adding."
+     "activities": [{
+       "title": "...", "activity_date": "YYYY-MM-DD" or null,
+       "start_time": "HH:MM" or null, "end_time": "HH:MM" or null,
+       "notes": "..." or null, "is_recurring": boolean,
+       "recurrence_pattern": "..." or null,
+       "recurrence_start_date": "YYYY-MM-DD" or null,
+       "recurrence_end_date": "YYYY-MM-DD" or null
+     }],
+     "message": "Brief confirmation."
    }
 
-2. If info is MISSING (no date, no time, or unclear what the activity is), respond with ONLY a conversational question. Do NOT include any JSON. Just ask 1-2 short questions like:
-   - "What day is that?"
-   - "What time does it start and end?"
-   - "When do you have soccer practice?"
+2. If info is MISSING, ask 1-2 short conversational questions. No JSON.
 
-3. For recurrence patterns:
-   - "every day" / "daily" → recurrence_pattern: "DAILY"
+3. Recurrence patterns:
+   - "every day" / "daily" → "DAILY"
    - "every Monday" → "MON"
    - "every weekday" → "MON,TUE,WED,THU,FRI"
    - "every Tuesday and Thursday" → "TUE,THU"
-   - "every week" / "weekly" → repeat on the same day of the week
+   - "every week" / "weekly" → repeat on same day of week
+   - "from Aug 1 to Sep 29 every Friday" → pattern "FRI", start "2025-08-01", end "2025-09-29"
 
-4. If the user says something like "move that to 5pm" or "cancel that", interpret it as an update/delete action:
-   { "action": "update_activity" | "delete_activity", "activity_title": "...", "updates": {...}, "message": "..." }
+4. If start_time missing but end_time given, default start to 1 hour before end.
+5. If end_time missing but start_time given, default end to 1 hour after start.
 
-5. Keep responses SHORT and friendly. You're talking to a high school student.
-6. Today's date is provided in each request for context.`;
+6. For date-bounded recurrences: generate instances ONLY within the date range.
+
+Keep responses SHORT and friendly. Today's date is provided in each request.`;
 
 export async function POST(request: Request) {
   try {
     const { messages, today } = await request.json();
 
     if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json(
-        { error: "Messages array required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Messages array required." }, { status: 400 });
     }
 
     const groqMessages = [
@@ -90,9 +95,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: content, action: null, activities: [] });
   } catch (error) {
     console.error("Chat error:", error);
-    return NextResponse.json(
-      { error: "Failed to process. Please try again." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to process." }, { status: 500 });
   }
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { type Activity } from "@/types/activity";
+import { type Activity, type SceneThemeId } from "@/types/activity";
 import { format } from "date-fns";
+import { getAdjacentColors } from "@/lib/themes";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Clock, Pencil, Trash2 } from "lucide-react";
 
@@ -13,6 +14,9 @@ interface Props {
   onDelete: (id: string) => void;
   onBack: () => void;
   isAsleep: (hour: number) => boolean;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
+  sceneTheme: SceneThemeId;
 }
 
 const HOUR_HEIGHT = 64;
@@ -29,18 +33,7 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
-const COLORS = [
-  "bg-indigo-500/20 border-indigo-500/40 text-indigo-300",
-  "bg-violet-500/20 border-violet-500/40 text-violet-300",
-  "bg-purple-500/20 border-purple-500/40 text-purple-300",
-  "bg-blue-500/20 border-blue-500/40 text-blue-300",
-  "bg-cyan-500/20 border-cyan-500/40 text-cyan-300",
-  "bg-emerald-500/20 border-emerald-500/40 text-emerald-300",
-  "bg-amber-500/20 border-amber-500/40 text-amber-300",
-  "bg-rose-500/20 border-rose-500/40 text-rose-300",
-];
-
-export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsleep }: Props) {
+export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsleep, selectedIds, onToggleSelect, sceneTheme }: Props) {
   const visibleHours = useMemo(() => {
     const hours: number[] = [];
     for (let h = 0; h < 24; h++) {
@@ -53,6 +46,11 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsle
     .filter((a) => a.start_time && a.end_time && !isAsleep(timeToMinutes(a.start_time) / 60))
     .sort((a, b) => timeToMinutes(a.start_time!) - timeToMinutes(b.start_time!));
 
+  const colorMap = useMemo(
+    () => getAdjacentColors(sorted.map((a) => ({ id: a.id, activity_date: a.activity_date, start_time: a.start_time })), sceneTheme),
+    [sorted, sceneTheme]
+  );
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-2 border-b border-border/50 bg-card/30">
@@ -64,18 +62,12 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsle
 
       <div className="flex-1 overflow-auto relative" style={{ height: visibleHours.length * HOUR_HEIGHT }}>
         {visibleHours.map((hour, idx) => (
-          <div
-            key={hour}
-            className="absolute left-0 right-0 border-t border-border/30"
-            style={{ top: idx * HOUR_HEIGHT }}
-          >
-            <span className="absolute -top-2.5 left-3 text-xs text-muted-foreground bg-background px-1">
-              {formatHour(hour)}
-            </span>
+          <div key={hour} className="absolute left-0 right-0 border-t border-border/30" style={{ top: idx * HOUR_HEIGHT }}>
+            <span className="absolute -top-2.5 left-3 text-xs text-muted-foreground bg-background px-1">{formatHour(hour)}</span>
           </div>
         ))}
 
-        {sorted.map((activity, i) => {
+        {sorted.map((activity) => {
           const startMin = timeToMinutes(activity.start_time!);
           const endMin = timeToMinutes(activity.end_time!);
           const startHour = Math.floor(startMin / 60);
@@ -83,16 +75,18 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsle
           if (visibleIdx === -1) return null;
           const top = visibleIdx * HOUR_HEIGHT + ((startMin % 60) / 60) * HOUR_HEIGHT;
           const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28);
+          const bg = colorMap.get(activity.id) || "hsl(240, 60%, 45%)";
+          const selected = selectedIds.has(activity.id);
 
           return (
-            <div
-              key={activity.id}
-              className="absolute group"
-              style={{ left: 56, right: 12, top, height }}
-            >
+            <div key={activity.id} className="absolute group" style={{ left: 56, right: 12, top, height }}>
               <div
-                className={`h-full rounded-lg border-l-3 px-3 py-1.5 flex flex-col justify-center overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-primary/50 ${COLORS[i % COLORS.length]}`}
-                onClick={() => onEdit(activity)}
+                className={`h-full rounded-lg border-l-3 px-3 py-1.5 flex flex-col justify-center overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-white/30 ${selected ? "ring-2 ring-primary" : ""}`}
+                style={{ backgroundColor: bg, color: "white", borderLeftColor: "rgba(255,255,255,0.3)" }}
+                onClick={(e) => {
+                  if (selected || e.shiftKey) { onToggleSelect(activity.id); }
+                  else { onEdit(activity); }
+                }}
               >
                 <div className="flex items-start justify-between gap-1">
                   <div className="min-w-0 flex-1">
@@ -102,29 +96,15 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsle
                         <Clock className="h-3 w-3" />
                         {activity.start_time} - {activity.end_time}
                       </span>
-                      {activity.notes && (
-                        <span className="truncate">{activity.notes}</span>
-                      )}
-                      {activity.is_recurring && (
-                        <span className="text-[10px] bg-primary/20 rounded px-1">recurring</span>
-                      )}
+                      {activity.notes && <span className="truncate">{activity.notes}</span>}
+                      {activity.is_recurring && <span className="text-[10px] bg-white/20 rounded px-1">recurring</span>}
                     </div>
                   </div>
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 hover:bg-background/20"
-                      onClick={(e) => { e.stopPropagation(); onEdit(activity); }}
-                    >
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-white/20" onClick={(e) => { e.stopPropagation(); onEdit(activity); }}>
                       <Pencil className="h-3 w-3" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive"
-                      onClick={(e) => { e.stopPropagation(); onDelete(activity.id); }}
-                    >
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-500/30" onClick={(e) => { e.stopPropagation(); onDelete(activity.id); }}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>

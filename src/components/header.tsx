@@ -4,18 +4,28 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, Trash2, CalendarDays, Moon } from "lucide-react";
+import { Zap, LogOut, Trash2, CalendarDays, Moon, Settings, CheckSquare, X } from "lucide-react";
 
 interface Props {
   user: User;
   onClearAll: () => void;
   activityCount: number;
-  view: "week" | "day";
+  view: "week" | "day" | "month";
   onToggleView: () => void;
   onOpenSettings: () => void;
+  onOpenProfile: () => void;
+  bulkCount: number;
+  onBulkDelete: () => void;
+  onBulkClear: () => void;
+  bulkMode: boolean;
+  onToggleBulkMode: () => void;
 }
 
-export function Header({ user, onClearAll, activityCount, view, onToggleView, onOpenSettings }: Props) {
+export function Header({
+  user, onClearAll, activityCount, view, onToggleView,
+  onOpenSettings, onOpenProfile, bulkCount, onBulkDelete,
+  onBulkClear, bulkMode, onToggleBulkMode,
+}: Props) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -25,6 +35,12 @@ export function Header({ user, onClearAll, activityCount, view, onToggleView, on
     router.refresh();
   };
 
+  const cycleView = () => {
+    onToggleView();
+  };
+
+  const viewLabel = view === "week" ? "Week" : view === "day" ? "Day" : "Month";
+
   return (
     <header className="flex items-center justify-between border-b border-border/50 px-4 py-3 bg-card/50 backdrop-blur-sm">
       <div className="flex items-center gap-2">
@@ -33,28 +49,40 @@ export function Header({ user, onClearAll, activityCount, view, onToggleView, on
         </div>
         <h1 className="text-lg font-semibold tracking-tight hidden sm:block">Smart Schedule</h1>
       </div>
+
+      {bulkMode && bulkCount > 0 && (
+        <div className="flex items-center gap-2 bg-destructive/10 rounded-lg px-3 py-1.5">
+          <span className="text-sm font-medium">{bulkCount} selected</span>
+          <Button variant="destructive" size="sm" onClick={onBulkDelete} className="h-7">
+            <Trash2 className="h-3.5 w-3.5 mr-1" />
+            Delete
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onBulkClear} className="h-7">
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" onClick={onToggleView} className="text-xs gap-1.5">
+        <Button variant="ghost" size="sm" onClick={cycleView} className="text-xs gap-1.5">
           <CalendarDays className="h-4 w-4" />
-          {view === "week" ? "Week" : "Day"}
+          {viewLabel}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onToggleBulkMode} className={`gap-1.5 ${bulkMode ? "text-primary" : ""}`}>
+          <CheckSquare className="h-4 w-4" />
         </Button>
         <Button variant="ghost" size="sm" onClick={onOpenSettings} className="gap-1.5">
           <Moon className="h-4 w-4" />
-          <span className="hidden sm:inline">Sleep</span>
         </Button>
-        {activityCount > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClearAll}
-            className="text-muted-foreground hover:text-destructive"
-          >
+        <Button variant="ghost" size="sm" onClick={onOpenProfile} className="gap-1.5">
+          <Settings className="h-4 w-4" />
+        </Button>
+        {activityCount > 0 && !bulkMode && (
+          <Button variant="ghost" size="sm" onClick={onClearAll} className="text-muted-foreground hover:text-destructive">
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
-        <span className="text-sm text-muted-foreground hidden sm:inline">
-          {user.email}
-        </span>
+        <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
         <Button variant="ghost" size="sm" onClick={handleSignOut}>
           <LogOut className="h-4 w-4" />
         </Button>
