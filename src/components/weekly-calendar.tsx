@@ -3,9 +3,6 @@
 import { useMemo } from "react";
 import {
   endOfWeek,
-  startOfWeek,
-  addWeeks,
-  subWeeks,
   format,
   eachDayOfInterval,
   isSameDay,
@@ -13,8 +10,6 @@ import {
 } from "date-fns";
 import { type Activity, type SceneThemeId } from "@/types/activity";
 import { getAdjacentColors } from "@/lib/themes";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 
 interface Props {
   currentWeekStart: Date;
@@ -42,26 +37,15 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
-export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onSelectDay, isAsleep, onEdit, selectedIds, onToggleSelect, sceneTheme }: Props) {
+function roundUpTo15(minutes: number): number {
+  return Math.ceil(minutes / 15) * 15;
+}
+
+export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAsleep, onEdit, selectedIds, onToggleSelect, sceneTheme }: Props) {
   const days = useMemo(() => {
     const end = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
     return eachDayOfInterval({ start: currentWeekStart, end });
   }, [currentWeekStart]);
-
-  const weekEnd = useMemo(() => endOfWeek(currentWeekStart, { weekStartsOn: 1 }), [currentWeekStart]);
-
-  const visibleHours = useMemo(() => {
-    const hours: number[] = [];
-    for (let h = 0; h < 24; h++) {
-      if (!isAsleep(h)) hours.push(h);
-    }
-    return hours;
-  }, [isAsleep]);
-
-  const colorMap = useMemo(
-    () => getAdjacentColors(activities.map((a) => ({ id: a.id, activity_date: a.activity_date, start_time: a.start_time })), sceneTheme),
-    [activities, sceneTheme]
-  );
 
   const getActivitiesForDay = (day: Date) =>
     activities.filter(
@@ -70,32 +54,33 @@ export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onS
         isSameDay(new Date(a.activity_date), day) &&
         a.is_scheduled &&
         a.start_time &&
-        a.end_time &&
-        !isAsleep(timeToMinutes(a.start_time) / 60)
+        a.end_time
     );
+
+  const colorMap = useMemo(
+    () => getAdjacentColors(activities.map((a) => ({ id: a.id, activity_date: a.activity_date, start_time: a.start_time })), sceneTheme),
+    [activities, sceneTheme]
+  );
+
+  const visibleHours = useMemo(() => {
+    let maxEndHour = 22;
+    for (const a of activities) {
+      if (a.end_time) {
+        const endMin = timeToMinutes(a.end_time);
+        const endHour = Math.ceil(endMin / 60);
+        if (endHour > maxEndHour) maxEndHour = endHour;
+      }
+    }
+    const roundedMax = roundUpTo15(maxEndHour * 60) / 60;
+    const hours: number[] = [];
+    for (let h = 0; h <= Math.min(roundedMax, 24); h++) {
+      if (!isAsleep(h)) hours.push(h);
+    }
+    return hours;
+  }, [activities, isAsleep]);
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card/30">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-sm">
-            {format(currentWeekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")}
-          </h2>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => onWeekChange(subWeeks(currentWeekStart, 1))}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => onWeekChange(startOfWeek(new Date(), { weekStartsOn: 1 }))} className="text-xs">
-            Today
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => onWeekChange(addWeeks(currentWeekStart, 1))}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
       <div className="flex-1 overflow-auto">
         <div className="grid grid-cols-[48px_repeat(7,1fr)] min-w-[700px]">
           <div className="border-r border-border/30" />
@@ -120,7 +105,10 @@ export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onS
                 return (
                   <div key={di} className="border-r border-t border-border/20 relative" style={{ height: HOUR_HEIGHT }}>
                     {dayActivities
-                      .filter((a) => Math.floor(timeToMinutes(a.start_time!) / 60) === hour)
+                      .filter((a) => {
+                        const startH = timeToMinutes(a.start_time!) / 60;
+                        return Math.floor(startH) === hour;
+                      })
                       .map((activity) => {
                         const startMin = timeToMinutes(activity.start_time!);
                         const endMin = timeToMinutes(activity.end_time!);

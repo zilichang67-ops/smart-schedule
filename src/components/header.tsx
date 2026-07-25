@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, Trash2, CalendarDays, Moon, Settings, CheckSquare, X, CalendarClock } from "lucide-react";
+import { Zap, LogOut, Trash2, CalendarDays, Moon, Settings, CheckSquare, X, CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Props {
   user: User;
@@ -13,6 +13,8 @@ interface Props {
   view: "week" | "day" | "month";
   onToggleView: () => void;
   onToday: () => void;
+  onPrev: () => void;
+  onNext: () => void;
   onOpenSettings: () => void;
   onOpenProfile: () => void;
   bulkCount: number;
@@ -20,12 +22,13 @@ interface Props {
   onBulkClear: () => void;
   bulkMode: boolean;
   onToggleBulkMode: () => void;
+  dateLabel: string;
 }
 
 export function Header({
   user, onClearAll, activityCount, view, onToggleView, onToday,
-  onOpenSettings, onOpenProfile, bulkCount, onBulkDelete,
-  onBulkClear, bulkMode, onToggleBulkMode,
+  onPrev, onNext, onOpenSettings, onOpenProfile, bulkCount, onBulkDelete,
+  onBulkClear, bulkMode, onToggleBulkMode, dateLabel,
 }: Props) {
   const router = useRouter();
   const supabase = createClient();
@@ -61,10 +64,17 @@ export function Header({
       )}
 
       <div className="flex items-center gap-1">
+        <Button variant="ghost" size="sm" onClick={onPrev} className="h-8 w-8 p-0">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
         <Button variant="ghost" size="sm" onClick={onToday} className="text-xs gap-1.5">
           <CalendarClock className="h-4 w-4" />
           Today
         </Button>
+        <Button variant="ghost" size="sm" onClick={onNext} className="h-8 w-8 p-0">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <span className="text-xs text-muted-foreground font-medium min-w-[120px] text-center hidden sm:inline">{dateLabel}</span>
         <Button variant="ghost" size="sm" onClick={onToggleView} className="text-xs gap-1.5">
           <CalendarDays className="h-4 w-4" />
           {viewLabel}

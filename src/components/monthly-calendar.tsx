@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   startOfMonth,
   endOfMonth,
@@ -11,14 +10,9 @@ import {
   isSameMonth,
   isSameDay,
   isToday,
-  addMonths,
-  subMonths,
 } from "date-fns";
-import { type Activity } from "@/types/activity";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { type Activity, type SceneThemeId } from "@/types/activity";
 import { getAdjacentColors } from "@/lib/themes";
-import { type SceneThemeId } from "@/types/activity";
 
 interface Props {
   activities: Activity[];
@@ -27,11 +21,10 @@ interface Props {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   sceneTheme: SceneThemeId;
+  month: Date;
 }
 
-export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, onToggleSelect, sceneTheme }: Props) {
-  const [month, setMonth] = useState(new Date());
-
+export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, onToggleSelect, sceneTheme, month }: Props) {
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -54,21 +47,6 @@ export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, 
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card/30">
-        <h2 className="font-semibold text-sm">{format(month, "MMMM yyyy")}</h2>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setMonth(subMonths(month, 1))}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setMonth(new Date())} className="text-xs">
-            Today
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setMonth(addMonths(month, 1))}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
       <div className="flex-1 overflow-auto p-2">
         <div className="grid grid-cols-7 gap-px">
           {weekDays.map((d) => (

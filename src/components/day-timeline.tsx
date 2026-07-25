@@ -33,23 +33,36 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
-export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsleep, selectedIds, onToggleSelect, sceneTheme }: Props) {
-  const visibleHours = useMemo(() => {
-    const hours: number[] = [];
-    for (let h = 0; h < 24; h++) {
-      if (!isAsleep(h)) hours.push(h);
-    }
-    return hours;
-  }, [isAsleep]);
+function roundUpTo15(minutes: number): number {
+  return Math.ceil(minutes / 15) * 15;
+}
 
+export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsleep, selectedIds, onToggleSelect, sceneTheme }: Props) {
   const sorted = [...activities]
-    .filter((a) => a.start_time && a.end_time && !isAsleep(timeToMinutes(a.start_time) / 60))
+    .filter((a) => a.start_time && a.end_time)
     .sort((a, b) => timeToMinutes(a.start_time!) - timeToMinutes(b.start_time!));
 
   const colorMap = useMemo(
     () => getAdjacentColors(sorted.map((a) => ({ id: a.id, activity_date: a.activity_date, start_time: a.start_time })), sceneTheme),
     [sorted, sceneTheme]
   );
+
+  const visibleHours = useMemo(() => {
+    let maxEndHour = 22;
+    for (const a of sorted) {
+      if (a.end_time) {
+        const endMin = timeToMinutes(a.end_time);
+        const endHour = Math.ceil(endMin / 60);
+        if (endHour > maxEndHour) maxEndHour = endHour;
+      }
+    }
+    const roundedMax = roundUpTo15(maxEndHour * 60) / 60;
+    const hours: number[] = [];
+    for (let h = 0; h <= Math.min(roundedMax, 24); h++) {
+      if (!isAsleep(h)) hours.push(h);
+    }
+    return hours;
+  }, [sorted, isAsleep]);
 
   return (
     <div className="flex flex-col h-full">

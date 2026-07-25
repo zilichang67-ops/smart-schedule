@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { type Activity, type SceneThemeId } from "@/types/activity";
-import { startOfWeek, format } from "date-fns";
+import { startOfWeek, format, addDays, addWeeks, subWeeks, addMonths, subMonths, endOfWeek } from "date-fns";
 import { useSleepSettings } from "@/hooks/use-sleep-settings";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { applySceneTheme } from "@/lib/themes";
@@ -36,6 +36,7 @@ export function ScheduleDashboard({ user }: Props) {
   );
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [view, setView] = useState<"week" | "day" | "month">("week");
+  const [monthView, setMonthView] = useState(new Date());
   const [sleepOpen, setSleepOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [sceneTheme, setSceneTheme] = useState<SceneThemeId>("indigo");
@@ -220,6 +221,35 @@ export function ScheduleDashboard({ user }: Props) {
     setView("day");
   };
 
+  const handlePrev = () => {
+    if (view === "day") {
+      setSelectedDay((d) => addDays(d || new Date(), -1));
+    } else if (view === "week") {
+      setCurrentWeekStart((w) => subWeeks(w, 1));
+    } else {
+      setMonthView((m) => subMonths(m, 1));
+    }
+  };
+
+  const handleNext = () => {
+    if (view === "day") {
+      setSelectedDay((d) => addDays(d || new Date(), 1));
+    } else if (view === "week") {
+      setCurrentWeekStart((w) => addWeeks(w, 1));
+    } else {
+      setMonthView((m) => addMonths(m, 1));
+    }
+  };
+
+  const dateLabel = useMemo(() => {
+    if (view === "day") return format(selectedDay || new Date(), "EEEE, MMM d, yyyy");
+    if (view === "week") {
+      const end = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+      return `${format(currentWeekStart, "MMM d")} – ${format(end, "MMM d, yyyy")}`;
+    }
+    return format(monthView, "MMMM yyyy");
+  }, [view, selectedDay, currentWeekStart, monthView]);
+
   const cycleView = () => {
     const order: Array<"week" | "day" | "month"> = ["week", "day", "month"];
     const idx = order.indexOf(view);
@@ -238,6 +268,7 @@ export function ScheduleDashboard({ user }: Props) {
       <Header
         user={user} onClearAll={handleClearAll} activityCount={activities.length}
         view={view} onToggleView={cycleView} onToday={handleToday}
+        onPrev={handlePrev} onNext={handleNext} dateLabel={dateLabel}
         onOpenSettings={() => setSleepOpen(true)} onOpenProfile={() => setProfileOpen(true)}
         bulkCount={bulk.count} onBulkDelete={handleBulkDelete}
         onBulkClear={() => { bulk.clear(); setBulkMode(false); }}
@@ -278,6 +309,7 @@ export function ScheduleDashboard({ user }: Props) {
                 activities={scheduled} onSelectDay={handleDaySelect}
                 onEdit={setEditingActivity} selectedIds={bulk.selectedIds}
                 onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
+                month={monthView}
               />
             )}
           </div>
