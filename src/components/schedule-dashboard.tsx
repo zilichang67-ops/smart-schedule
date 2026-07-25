@@ -48,6 +48,7 @@ export function ScheduleDashboard({ user }: Props) {
   const [groups, setGroups] = useState<ActivityGroup[]>([]);
   const [groupManagerOpen, setGroupManagerOpen] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>("student");
+  const [showCompleted, setShowCompleted] = useState(true);
   const sleep = useSleepSettings();
   const bulk = useBulkSelection();
   const notif = useNotifications(activities);
@@ -202,6 +203,7 @@ export function ScheduleDashboard({ user }: Props) {
       title: updated.title, start_time: updated.start_time, end_time: updated.end_time,
       notes: updated.notes, is_scheduled: updated.is_scheduled, activity_date: updated.activity_date,
       is_recurring: updated.is_recurring, recurrence_pattern: updated.recurrence_pattern,
+      is_completed: updated.is_completed,
     }).eq("id", updated.id);
     if (!error) setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     setEditingActivity(null);
@@ -375,8 +377,8 @@ export function ScheduleDashboard({ user }: Props) {
     if (next === "week") setSelectedDay(null);
   };
 
-  const scheduled = activities.filter((a) => a.is_scheduled);
-  const unscheduled = activities.filter((a) => !a.is_scheduled);
+  const scheduled = activities.filter((a) => a.is_scheduled && (showCompleted || !a.is_completed));
+  const unscheduled = activities.filter((a) => !a.is_scheduled && (showCompleted || !a.is_completed));
   const allSelectableIds = scheduled.map((a) => a.id);
 
   return (
@@ -390,6 +392,8 @@ export function ScheduleDashboard({ user }: Props) {
         onOpenGroups={() => setGroupManagerOpen(true)}
         onRequestNotifications={notif.requestPermission}
         notificationPermission={notif.permission}
+        showCompleted={showCompleted}
+        onToggleShowCompleted={() => setShowCompleted(!showCompleted)}
         bulkCount={bulk.count} onBulkDelete={handleBulkDeleteSelected}
         onBulkClear={() => { bulk.clear(); setBulkMode(false); }}
         bulkMode={bulkMode} onToggleBulkMode={() => { setBulkMode(!bulkMode); bulk.clear(); }}

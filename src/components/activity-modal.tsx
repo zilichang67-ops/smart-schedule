@@ -51,6 +51,7 @@ export function ActivityModal({ activity, onSave, onDelete, onClose }: Props) {
   const [isScheduled, setIsScheduled] = useState(activity.is_scheduled);
   const [activityDate, setActivityDate] = useState(activity.activity_date);
   const [recurrence, setRecurrence] = useState(getRecurrenceValue(activity));
+  const [isCompleted, setIsCompleted] = useState(activity.is_completed);
 
   const handleSave = () => {
     const isRecurring = recurrence !== "never";
@@ -64,6 +65,7 @@ export function ActivityModal({ activity, onSave, onDelete, onClose }: Props) {
       activity_date: activityDate,
       is_recurring: isRecurring,
       recurrence_pattern: isRecurring ? recurrence : null,
+      is_completed: isCompleted,
     });
   };
 
@@ -173,6 +175,19 @@ export function ActivityModal({ activity, onSave, onDelete, onClose }: Props) {
               placeholder="Location, people, extra details..."
               className="min-h-[80px]"
             />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border/50 p-3">
+            <div>
+              <p className="text-sm font-medium">{isCompleted ? "Marked as Done" : "Mark as Done"}</p>
+              <p className="text-xs text-muted-foreground">{isCompleted ? "This activity is completed" : "Mark this activity as completed"}</p>
+            </div>
+            <button
+              onClick={() => setIsCompleted(!isCompleted)}
+              className={`h-6 w-11 rounded-full transition-colors relative ${isCompleted ? "bg-green-500" : "bg-muted"}`}
+            >
+              <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isCompleted ? "left-[22px]" : "left-0.5"}`} />
+            </button>
           </div>
         </div>
 

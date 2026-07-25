@@ -78,7 +78,7 @@ export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, 
                     return (
                       <div
                         key={a.id}
-                        className={`flex items-center gap-1 text-[10px] rounded px-1 py-0.5 truncate cursor-pointer hover:ring-1 hover:ring-white/20 ${
+                        className={`flex items-center gap-1 text-[10px] rounded px-1 py-0.5 truncate cursor-pointer hover:ring-1 hover:ring-white/20 ${a.is_completed ? "line-through opacity-50" : ""} ${
                           selected ? "ring-2 ring-primary" : ""
                         }`}
                         style={{ backgroundColor: isMilestone ? "transparent" : bg, color: isMilestone ? bg : "white" }}

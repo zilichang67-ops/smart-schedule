@@ -4,9 +4,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, Trash2, Moon, Settings, CheckSquare, X, ChevronLeft, ChevronRight, FolderTree, Bell } from "lucide-react";
+import { Zap, LogOut, Trash2, Moon, Settings, CheckSquare, X, ChevronLeft, ChevronRight, FolderTree, Bell, Eye, EyeOff } from "lucide-react";
 import { JumpToDate } from "@/components/jump-to-date";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { useI18n } from "@/i18n/context";
 
 interface Props {
@@ -30,6 +29,8 @@ interface Props {
   onBulkClear: () => void;
   bulkMode: boolean;
   onToggleBulkMode: () => void;
+  showCompleted: boolean;
+  onToggleShowCompleted: () => void;
 }
 
 export function Header({
@@ -37,6 +38,7 @@ export function Header({
   onPrev, onNext, onJumpToDate, currentDate, onOpenSettings, onOpenProfile,
   onOpenGroups, onRequestNotifications, notificationPermission,
   bulkCount, onBulkDelete, onBulkClear, bulkMode, onToggleBulkMode,
+  showCompleted, onToggleShowCompleted,
 }: Props) {
   const router = useRouter();
   const supabase = createClient();
@@ -88,6 +90,9 @@ export function Header({
         <Button variant="ghost" size="sm" onClick={onToggleView} className="text-xs gap-1.5 h-8">
           {viewLabel}
         </Button>
+        <Button variant="ghost" size="sm" onClick={onToggleShowCompleted} className={`h-8 gap-1.5 ${showCompleted ? "text-primary" : "text-muted-foreground"}`} title={showCompleted ? "Hide done" : "Show done"}>
+          {showCompleted ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </Button>
         <Button variant="ghost" size="sm" onClick={onOpenGroups} className="h-8 gap-1.5" title={t.groups}>
           <FolderTree className="h-4 w-4" />
         </Button>
@@ -105,7 +110,6 @@ export function Header({
         <Button variant="ghost" size="sm" onClick={onOpenProfile} className="h-8 gap-1.5">
           <Settings className="h-4 w-4" />
         </Button>
-        <LanguageSwitcher />
         {activityCount > 0 && !bulkMode && (
           <Button variant="ghost" size="sm" onClick={onClearAll} className="h-8 text-muted-foreground hover:text-destructive">
             <Trash2 className="h-4 w-4" />

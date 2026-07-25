@@ -17,6 +17,7 @@ export interface Activity {
   target_date: string | null;
   group_id: string | null;
   reminder_trigger_minutes: number | null;
+  is_completed: boolean;
   created_at: string;
 }
 

@@ -155,7 +155,7 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAs
                             }}
                           >
                             <div className="flex items-center justify-between">
-                              <p className="text-[10px] font-medium truncate">{activity.title}</p>
+                              <p className={`text-[10px] font-medium truncate ${activity.is_completed ? "line-through opacity-60" : ""}`}>{activity.title}</p>
                               <button
                                 className="opacity-0 group-hover/card:opacity-100 transition-opacity text-white/70 hover:text-white shrink-0"
                                 onClick={(e) => { e.stopPropagation(); onFixWithAI(activity); }}

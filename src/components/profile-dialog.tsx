@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { User, Palette, Lock, Check, Sun, Moon, Monitor, GraduationCap, Briefcase } from "lucide-react";
+import { User, Palette, Lock, Check, Sun, Moon, Monitor, GraduationCap, Briefcase, Globe } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { type Locale } from "@/i18n/en";
 
@@ -126,6 +126,43 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange, onRoleC
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder={t.displayName}
               />
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Language
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                    preferredLang === "en"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/50 hover:border-border"
+                  }`}
+                  onClick={() => setPreferredLang("en")}
+                >
+                  <span>🇺🇸</span>
+                  <span className="flex-1 text-left">English</span>
+                  {preferredLang === "en" && <Check className="h-4 w-4" />}
+                </button>
+                <button
+                  className={`flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                    preferredLang === "vi"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/50 hover:border-border"
+                  }`}
+                  onClick={() => setPreferredLang("vi")}
+                >
+                  <span>🇻🇳</span>
+                  <span className="flex-1 text-left">Tiếng Việt</span>
+                  {preferredLang === "vi" && <Check className="h-4 w-4" />}
+                </button>
+              </div>
             </CardContent>
           </Card>
 

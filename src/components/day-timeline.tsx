@@ -130,7 +130,7 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsle
               >
                 <div className="flex items-start justify-between gap-1">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">{activity.title}</p>
+                    <p className={`font-medium text-sm truncate ${activity.is_completed ? "line-through opacity-60" : ""}`}>{activity.title}</p>
                     <div className="flex items-center gap-2 text-xs opacity-70 mt-0.5">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
