@@ -19,9 +19,9 @@ interface Props {
   onWeekChange: (date: Date) => void;
   activities: Activity[];
   onSelectDay: (date: Date) => void;
+  isAsleep: (hour: number) => boolean;
 }
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const HOUR_HEIGHT = 48;
 
 function formatHour(h: number): string {
@@ -46,7 +46,7 @@ const DAY_COLORS = [
   "bg-amber-500/20 border-amber-500/40",
 ];
 
-export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onSelectDay }: Props) {
+export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onSelectDay, isAsleep }: Props) {
   const days = useMemo(() => {
     const end = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
     return eachDayOfInterval({ start: currentWeekStart, end });
@@ -54,10 +54,26 @@ export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onS
 
   const weekEnd = useMemo(() => endOfWeek(currentWeekStart, { weekStartsOn: 1 }), [currentWeekStart]);
 
-  const getActivitiesForDay = (day: Date) =>
-    activities.filter((a) => a.activity_date && isSameDay(new Date(a.activity_date), day) && a.is_scheduled && a.start_time && a.end_time);
+  const visibleHours = useMemo(() => {
+    const hours: number[] = [];
+    for (let h = 0; h < 24; h++) {
+      if (!isAsleep(h)) hours.push(h);
+    }
+    return hours;
+  }, [isAsleep]);
 
-  return (
+  const getActivitiesForDay = (day: Date) =>
+    activities.filter(
+      (a) =>
+        a.activity_date &&
+        isSameDay(new Date(a.activity_date), day) &&
+        a.is_scheduled &&
+        a.start_time &&
+        a.end_time &&
+        !isAsleep(timeToMinutes(a.start_time) / 60)
+    );
+
+    return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card/30">
         <div className="flex items-center gap-3">
@@ -67,26 +83,13 @@ export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onS
           </h2>
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onWeekChange(subWeeks(currentWeekStart, 1))}
-          >
+          <Button variant="ghost" size="sm" onClick={() => onWeekChange(subWeeks(currentWeekStart, 1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onWeekChange(new Date())}
-            className="text-xs"
-          >
+          <Button variant="ghost" size="sm" onClick={() => onWeekChange(new Date())} className="text-xs">
             Today
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onWeekChange(addWeeks(currentWeekStart, 1))}
-          >
+          <Button variant="ghost" size="sm" onClick={() => onWeekChange(addWeeks(currentWeekStart, 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -110,13 +113,12 @@ export function WeeklyCalendar({ currentWeekStart, onWeekChange, activities, onS
             </div>
           ))}
 
-          {HOURS.map((hour) => (
+          {visibleHours.map((hour) => (
             <HourRow
               key={hour}
               hour={hour}
               days={days}
               getActivitiesForDay={getActivitiesForDay}
-              onEdit={() => {}}
             />
           ))}
         </div>
@@ -129,19 +131,14 @@ function HourRow({
   hour,
   days,
   getActivitiesForDay,
-  onEdit,
 }: {
   hour: number;
   days: Date[];
   getActivitiesForDay: (day: Date) => Activity[];
-  onEdit: (a: Activity) => void;
 }) {
   return (
     <>
-      <div
-        className="border-r border-t border-border/30 relative"
-        style={{ height: HOUR_HEIGHT }}
-      >
+      <div className="border-r border-t border-border/30 relative" style={{ height: HOUR_HEIGHT }}>
         <span className="absolute -top-2 right-1 text-[10px] text-muted-foreground">
           {formatHour(hour)}
         </span>
@@ -149,16 +146,9 @@ function HourRow({
       {days.map((day, di) => {
         const dayActivities = getActivitiesForDay(day);
         return (
-          <div
-            key={di}
-            className="border-r border-t border-border/20 relative"
-            style={{ height: HOUR_HEIGHT }}
-          >
+          <div key={di} className="border-r border-t border-border/20 relative" style={{ height: HOUR_HEIGHT }}>
             {dayActivities
-              .filter((a) => {
-                const startH = timeToMinutes(a.start_time!) / 60;
-                return Math.floor(startH) === hour;
-              })
+              .filter((a) => Math.floor(timeToMinutes(a.start_time!) / 60) === hour)
               .map((activity) => {
                 const startMin = timeToMinutes(activity.start_time!);
                 const endMin = timeToMinutes(activity.end_time!);
@@ -171,7 +161,6 @@ function HourRow({
                     key={activity.id}
                     className={`absolute left-0.5 right-0.5 rounded px-1.5 py-0.5 border-l-2 cursor-pointer hover:ring-1 hover:ring-primary/50 overflow-hidden ${DAY_COLORS[di]}`}
                     style={{ top: topOffset, height: Math.max(height, 18) }}
-                    onClick={() => onEdit(activity)}
                   >
                     <p className="text-[10px] font-medium truncate">{activity.title}</p>
                     <p className="text-[9px] opacity-70 truncate">

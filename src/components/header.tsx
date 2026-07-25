@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, Trash2, CalendarDays } from "lucide-react";
+import { Zap, LogOut, Trash2, CalendarDays, Moon } from "lucide-react";
 
 interface Props {
   user: User;
@@ -12,9 +12,10 @@ interface Props {
   activityCount: number;
   view: "week" | "day";
   onToggleView: () => void;
+  onOpenSettings: () => void;
 }
 
-export function Header({ user, onClearAll, activityCount, view, onToggleView }: Props) {
+export function Header({ user, onClearAll, activityCount, view, onToggleView, onOpenSettings }: Props) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -32,10 +33,14 @@ export function Header({ user, onClearAll, activityCount, view, onToggleView }: 
         </div>
         <h1 className="text-lg font-semibold tracking-tight hidden sm:block">Smart Schedule</h1>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <Button variant="ghost" size="sm" onClick={onToggleView} className="text-xs gap-1.5">
           <CalendarDays className="h-4 w-4" />
           {view === "week" ? "Week" : "Day"}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onOpenSettings} className="gap-1.5">
+          <Moon className="h-4 w-4" />
+          <span className="hidden sm:inline">Sleep</span>
         </Button>
         {activityCount > 0 && (
           <Button
@@ -44,8 +49,7 @@ export function Header({ user, onClearAll, activityCount, view, onToggleView }: 
             onClick={onClearAll}
             className="text-muted-foreground hover:text-destructive"
           >
-            <Trash2 className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Clear All</span>
+            <Trash2 className="h-4 w-4" />
           </Button>
         )}
         <span className="text-sm text-muted-foreground hidden sm:inline">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { type Activity } from "@/types/activity";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,9 @@ interface Props {
   onEdit: (a: Activity) => void;
   onDelete: (id: string) => void;
   onBack: () => void;
+  isAsleep: (hour: number) => boolean;
 }
 
-const HOURS = Array.from({ length: 25 }, (_, i) => i);
 const HOUR_HEIGHT = 64;
 
 function formatHour(h: number): string {
@@ -39,9 +40,17 @@ const COLORS = [
   "bg-rose-500/20 border-rose-500/40 text-rose-300",
 ];
 
-export function DayTimeline({ date, activities, onEdit, onDelete, onBack }: Props) {
+export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsleep }: Props) {
+  const visibleHours = useMemo(() => {
+    const hours: number[] = [];
+    for (let h = 0; h < 24; h++) {
+      if (!isAsleep(h)) hours.push(h);
+    }
+    return hours;
+  }, [isAsleep]);
+
   const sorted = [...activities]
-    .filter((a) => a.start_time && a.end_time)
+    .filter((a) => a.start_time && a.end_time && !isAsleep(timeToMinutes(a.start_time) / 60))
     .sort((a, b) => timeToMinutes(a.start_time!) - timeToMinutes(b.start_time!));
 
   return (
@@ -53,12 +62,12 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack }: Prop
         <h2 className="font-semibold text-sm">{format(date, "EEEE, MMMM d, yyyy")}</h2>
       </div>
 
-      <div className="flex-1 overflow-auto relative" style={{ height: HOURS.length * HOUR_HEIGHT }}>
-        {HOURS.map((hour) => (
+      <div className="flex-1 overflow-auto relative" style={{ height: visibleHours.length * HOUR_HEIGHT }}>
+        {visibleHours.map((hour, idx) => (
           <div
             key={hour}
             className="absolute left-0 right-0 border-t border-border/30"
-            style={{ top: hour * HOUR_HEIGHT }}
+            style={{ top: idx * HOUR_HEIGHT }}
           >
             <span className="absolute -top-2.5 left-3 text-xs text-muted-foreground bg-background px-1">
               {formatHour(hour)}
@@ -69,7 +78,10 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack }: Prop
         {sorted.map((activity, i) => {
           const startMin = timeToMinutes(activity.start_time!);
           const endMin = timeToMinutes(activity.end_time!);
-          const top = (startMin / 60) * HOUR_HEIGHT;
+          const startHour = Math.floor(startMin / 60);
+          const visibleIdx = visibleHours.indexOf(startHour);
+          if (visibleIdx === -1) return null;
+          const top = visibleIdx * HOUR_HEIGHT + ((startMin % 60) / 60) * HOUR_HEIGHT;
           const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 28);
 
           return (
@@ -91,9 +103,7 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack }: Prop
                         {activity.start_time} - {activity.end_time}
                       </span>
                       {activity.notes && (
-                        <span className="flex items-center gap-1 truncate">
-                          <span className="truncate">{activity.notes}</span>
-                        </span>
+                        <span className="truncate">{activity.notes}</span>
                       )}
                       {activity.is_recurring && (
                         <span className="text-[10px] bg-primary/20 rounded px-1">recurring</span>

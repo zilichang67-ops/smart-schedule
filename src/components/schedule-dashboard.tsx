@@ -5,6 +5,7 @@ import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { type Activity } from "@/types/activity";
 import { startOfWeek, format } from "date-fns";
+import { useSleepSettings } from "@/hooks/use-sleep-settings";
 import { Header } from "@/components/header";
 import { WeeklyCalendar } from "@/components/weekly-calendar";
 import { DayTimeline } from "@/components/day-timeline";
@@ -13,6 +14,7 @@ import { UnscheduledPool } from "@/components/unscheduled-pool";
 import { ActivityModal } from "@/components/activity-modal";
 import { ConflictModal, type ConflictInfo } from "@/components/conflict-modal";
 import { ChatAssistant } from "@/components/chat-assistant";
+import { SleepSettingsDialog } from "@/components/sleep-settings-dialog";
 
 interface Props {
   user: User;
@@ -29,7 +31,14 @@ export function ScheduleDashboard({ user }: Props) {
   );
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [view, setView] = useState<"week" | "day">("week");
+  const [sleepOpen, setSleepOpen] = useState(false);
+  const sleep = useSleepSettings();
   const supabase = createClient();
+
+  useEffect(() => {
+    sleep.init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const today = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
@@ -215,6 +224,7 @@ export function ScheduleDashboard({ user }: Props) {
             setSelectedDay(new Date());
           }
         }}
+        onOpenSettings={() => setSleepOpen(true)}
       />
 
       <div className="flex-1 overflow-hidden">
@@ -226,6 +236,7 @@ export function ScheduleDashboard({ user }: Props) {
                 onWeekChange={setCurrentWeekStart}
                 activities={scheduled}
                 onSelectDay={handleDaySelect}
+                isAsleep={sleep.isAsleep}
               />
             ) : (
               <DayTimeline
@@ -236,6 +247,7 @@ export function ScheduleDashboard({ user }: Props) {
                 onEdit={setEditingActivity}
                 onDelete={handleDeleteActivity}
                 onBack={() => setView("week")}
+                isAsleep={sleep.isAsleep}
               />
             )}
           </div>
@@ -264,6 +276,14 @@ export function ScheduleDashboard({ user }: Props) {
       </div>
 
       <ChatAssistant onActivityParsed={handleParseComplete} today={today} />
+
+      <SleepSettingsDialog
+        open={sleepOpen}
+        onOpenChange={setSleepOpen}
+        settings={sleep.settings}
+        onUpdate={sleep.update}
+        onReset={sleep.reset}
+      />
 
       {editingActivity && (
         <ActivityModal
