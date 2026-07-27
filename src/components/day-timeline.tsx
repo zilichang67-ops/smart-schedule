@@ -52,7 +52,7 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsle
   );
 
   const visibleHours = useMemo(() => {
-    let maxEndHour = 22;
+    let maxEndHour = 24;
     for (const a of sorted) {
       if (a.end_time) {
         const endMin = timeToMinutes(a.end_time);

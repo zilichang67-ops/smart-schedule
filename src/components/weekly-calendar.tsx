@@ -66,7 +66,7 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAs
   );
 
   const visibleHours = useMemo(() => {
-    let maxEndHour = 22;
+    let maxEndHour = 24;
     for (const a of activities) {
       if (a.end_time) {
         const endMin = timeToMinutes(a.end_time);
