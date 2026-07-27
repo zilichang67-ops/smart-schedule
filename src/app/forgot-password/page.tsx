@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, ArrowLeft, Mail } from "lucide-react";
+import { Zap, ArrowLeft, Mail, CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/i18n/context";
 
@@ -23,14 +23,18 @@ export default function ForgotPasswordPage() {
     setError("");
     setLoading(true);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setSent(true);
+      if (error) {
+        setError(error.message);
+      } else {
+        setSent(true);
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
     }
     setLoading(false);
   };
@@ -55,9 +59,13 @@ export default function ForgotPasswordPage() {
           </CardHeader>
           <CardContent>
             {sent ? (
-              <div className="space-y-4 text-center">
-                <div className="rounded-lg bg-primary/10 p-4">
-                  <p className="text-sm font-medium text-primary">{t.resetLinkSent}</p>
+              <div className="space-y-4">
+                <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-4 flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-green-600 dark:text-green-400">{t.resetLinkSent}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Check your spam/junk folder if you don&apos;t see it.</p>
+                  </div>
                 </div>
                 <Link href="/auth">
                   <Button variant="outline" className="w-full gap-2">
@@ -80,7 +88,12 @@ export default function ForgotPasswordPage() {
                     className="bg-background"
                   />
                 </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
+                {error && (
+                  <div className="rounded-lg bg-destructive/10 p-3 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                    <p className="text-sm text-destructive">{error}</p>
+                  </div>
+                )}
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? t.loading : t.resetPassword}
                 </Button>

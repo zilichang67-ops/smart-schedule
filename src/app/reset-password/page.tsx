@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, Lock, CheckCircle } from "lucide-react";
+import { Zap, Lock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 
 export default function ResetPasswordPage() {
@@ -16,20 +16,36 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [validLink, setValidLink] = useState(true);
+  const [validLink, setValidLink] = useState(false);
+  const [checking, setChecking] = useState(true);
   const router = useRouter();
   const supabase = createClient();
   const { t } = useI18n();
 
-  useEffect(() => {
-    const checkSession = async () => {
+  const checkSession = useCallback(async () => {
+    try {
+      const hash = window.location.hash;
+      if (hash && hash.includes("access_token")) {
+        setValidLink(true);
+        setChecking(false);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      if (session) {
+        setValidLink(true);
+      } else {
         setValidLink(false);
       }
-    };
-    checkSession();
+    } catch {
+      setValidLink(false);
+    }
+    setChecking(false);
   }, [supabase]);
+
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,10 +66,19 @@ export default function ResetPasswordPage() {
       setError(error.message);
     } else {
       setSuccess(true);
+      await supabase.auth.signOut();
       setTimeout(() => router.push("/auth"), 2000);
     }
     setLoading(false);
   };
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -76,7 +101,13 @@ export default function ResetPasswordPage() {
           <CardContent>
             {!validLink ? (
               <div className="space-y-4 text-center">
-                <p className="text-sm text-destructive">{t.invalidResetLink}</p>
+                <div className="rounded-lg bg-destructive/10 p-4 flex items-center gap-3 justify-center">
+                  <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+                  <p className="text-sm text-destructive">{t.invalidResetLink}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The reset link may have expired. Please request a new one.
+                </p>
                 <Button onClick={() => router.push("/forgot-password")} className="w-full">
                   {t.resetPassword}
                 </Button>
