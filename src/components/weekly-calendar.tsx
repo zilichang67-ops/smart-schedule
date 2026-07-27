@@ -68,10 +68,13 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAs
   const visibleHours = useMemo(() => {
     let maxEndHour = 24;
     for (const a of activities) {
-      if (a.end_time) {
+      if (a.start_time && a.end_time) {
         const endMin = timeToMinutes(a.end_time);
         const endHour = Math.ceil(endMin / 60);
         if (endHour > maxEndHour) maxEndHour = endHour;
+        const startMin = timeToMinutes(a.start_time);
+        const startHour = Math.floor(startMin / 60);
+        if (startHour < 6 && startHour >= 0) maxEndHour = 24;
       }
     }
     const roundedMax = roundUpTo15(maxEndHour * 60) / 60;
