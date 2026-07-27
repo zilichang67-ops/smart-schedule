@@ -8,58 +8,49 @@ function getGroq() {
   return new Groq({ apiKey: process.env.GROQ_API_KEY });
 }
 
-const SYSTEM_PROMPT = `You are an intelligent scheduling assistant. You have deep calendar awareness, group management, and predictive scheduling capabilities.
+const SYSTEM_PROMPT = `You are an intelligent scheduling assistant.
 
 {{ROLE_CONTEXT}}
 
 CAPABILITIES:
 1. CREATE activities from messy text
-2. MODIFY existing activities (time, title, notes, date, group)
-3. DELETE activities (single, by date, by group, or bulk)
+2. MODIFY existing activities (change time, title, notes, date)
+3. DELETE existing activities (single or bulk)
 4. MOVE activities to different times/dates
 5. SCHEDULE unscheduled items (assign time/date to pool items)
-6. ASSIGN GROUPS: Map activities to category groups
-7. PREDICTIVE SCATTER: Generate evenly-spaced study/prep blocks across a date range
-8. SMART CLARIFICATIONS: Cross-reference conflicts before asking questions
 
-GROUPS:
-- Groups are hierarchical: "School" -> "STEM", "School" -> "P.E.", "Personal" -> "Health"
-- When creating/modifying activities, you can assign them to a group by name
-- Available groups are listed in the context
+EXISTING ACTIVITIES are listed in the context below. You MUST reference them by title when modifying or deleting.
 
-RESPONSE FORMAT:
-Always respond with JSON in \`\`\`json\n...\n\`\`\`:
+DELETE RULES:
+- Single delete: action="delete_activity", target_title="exact title from list", target_date="YYYY-MM-DD"
+- Bulk delete by date: action="bulk_delete", delete_filter={"date":"YYYY-MM-DD"}
+- Bulk delete all unscheduled: action="bulk_delete", delete_filter={"unscheduled_only":true}
+- Always confirm what you're deleting in your message
+
+MODIFY RULES:
+- Modify: action="modify_activity", target_title="exact title from list", target_date="YYYY-MM-DD", updates={changed fields}
+- Only include fields that changed: start_time, end_time, title, notes, activity_date
+- Always confirm what you changed
+
+CREATE RULES:
+- Create: action="create_activity", activities=[{title, start_time, end_time, notes, activity_date, is_recurring, recurrence_pattern}]
+- MILESTONES (single-point actions like "leave at 3pm"): set start_time AND end_time to same value
+- If start but no end, default +1 hour (unless milestone)
+
+If info is MISSING for a create, ask 1-2 short questions. Do NOT include JSON in that case.
+
+RESPONSE FORMAT (always JSON in \`\`\`json\n...\n\`\`\`):
 {
-  "action": "create_activity" | "modify_activity" | "delete_activity" | "move_activity" | "schedule_unscheduled" | "bulk_delete" | "assign_group" | "predictive_scatter",
+  "action": "create_activity" | "modify_activity" | "delete_activity" | "move_activity" | "schedule_unscheduled" | "bulk_delete",
   "activities": [{ ... }],
   "target_title": "string",
   "target_date": "YYYY-MM-DD",
   "updates": { ... },
-  "delete_filter": { "date", "title", "group_id", "unscheduled_only" },
-  "group_name": "string",
-  "group_id": "string",
-  "scatter_config": { "title": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD", "sessions_per_week": number, "duration_minutes": number, "preferred_times": ["HH:MM"], "group_name": "string", "reminder_minutes": number },
-  "message": "Brief confirmation."
+  "delete_filter": { "date": "YYYY-MM-DD", "title": "string", "unscheduled_only": boolean },
+  "message": "Brief confirmation of what you did"
 }
 
-SMART CLARIFICATIONS:
-- When user requests a time that conflicts with existing events, CHECK the schedule and suggest alternatives
-- Example: "Soccer ends at 4:30, want me to put Math at 4:30 instead?"
-- Reference group context when relevant: "That's under your STEM group, want to keep it there?"
-
-PREDICTIVE SCATTER:
-- When user says "help me prepare for X exam in 2 weeks", generate evenly-spaced study blocks
-- Check existing schedule for free slots, avoid conflicts
-- Spread sessions logically (e.g., 4 sessions/week for 2 weeks = 8 blocks)
-- Add reminder if appropriate
-
-RULES:
-- start_time/end_time: "HH:MM" 24-hour, MILESTONES set same value
-- unscheduled_precision: "NONE"/"MONTH"/"DATE"/"WEEK", target_date for broad items
-- If start but no end, default +1 hour (unless milestone)
-- For modifications, only include changed fields
-- Keep responses SHORT and friendly
-- Today's date provided for context`;
+Keep responses SHORT and friendly. Today's date: {{TODAY}}`;
 
 export async function POST(request: Request) {
   try {
@@ -72,20 +63,23 @@ export async function POST(request: Request) {
     const scheduled = existingActivities?.filter((a: Activity) => a.is_scheduled) || [];
     const unscheduled = existingActivities?.filter((a: Activity) => !a.is_scheduled) || [];
 
-    const activityContext = `\n\nEXISTING ACTIVITIES:\nSCHEDULED:\n${scheduled.map((a: Activity) =>
+    const activityContext = `\n\nEXISTING ACTIVITIES (reference these exactly by title for modify/delete):\nSCHEDULED:\n${scheduled.map((a: Activity) =>
       `- "${a.title}" on ${a.activity_date} ${a.start_time || '??:??'}-${a.end_time || '??:??'} (id: ${a.id})`
     ).join("\n") || "(none)"}\n\nUNSCHEDULED POOL:\n${unscheduled.map((a: Activity) =>
       `- "${a.title}" [precision: ${a.unscheduled_precision || 'NONE'}] ${a.target_date ? `(target: ${a.target_date})` : '(no date)'} (id: ${a.id})`
     ).join("\n") || "(none)"}`;
 
     const roleContext = userRole === "worker"
-      ? `You are assisting a working professional. Use terminology like "meetings", "projects", "deep work", "admin", "client calls", "deadlines". Suggest groups like "Work", "Projects", "Meetings", "Admin".`
-      : `You are assisting a high school student. Use terminology like "classes", "homework", "study blocks", "exams", "P.E.". Suggest groups like "School", "STEM", "P.E.", "Personal".`;
+      ? `You are assisting a working professional. Use terminology like "meetings", "projects", "deep work", "admin", "client calls", "deadlines".`
+      : `You are assisting a high school student. Use terminology like "classes", "homework", "study blocks", "exams", "P.E.".`;
 
     const groqMessages = [
       {
         role: "system" as const,
-        content: SYSTEM_PROMPT.replace("{{ROLE_CONTEXT}}", roleContext) + `\n\nToday's date: ${today || new Date().toISOString().split("T")[0]}` + activityContext,
+        content: SYSTEM_PROMPT
+          .replace("{{ROLE_CONTEXT}}", roleContext)
+          .replace("{{TODAY}}", today || new Date().toISOString().split("T")[0])
+          + activityContext,
       },
       ...messages.map((m: ChatMessage) => ({
         role: m.role as "user" | "assistant",
@@ -97,7 +91,7 @@ export async function POST(request: Request) {
       model: "llama-3.3-70b-versatile",
       messages: groqMessages,
       temperature: 0.3,
-      max_tokens: 1500,
+      max_tokens: 1024,
     });
 
     const content = completion.choices[0]?.message?.content || "";
@@ -114,9 +108,6 @@ export async function POST(request: Request) {
           target_date: parsed.target_date || null,
           updates: parsed.updates || null,
           delete_filter: parsed.delete_filter || null,
-          group_name: parsed.group_name || null,
-          group_id: parsed.group_id || null,
-          scatter_config: parsed.scatter_config || null,
         });
       } catch {
         return NextResponse.json({ message: content, action: null, activities: [] });

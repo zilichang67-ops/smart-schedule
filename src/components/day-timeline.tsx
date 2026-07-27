@@ -13,7 +13,6 @@ interface Props {
   onEdit: (a: Activity) => void;
   onDelete: (id: string) => void;
   onBack: () => void;
-  isAsleep: (hour: number) => boolean;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   sceneTheme: SceneThemeId;
@@ -38,7 +37,7 @@ function roundUpTo15(minutes: number): number {
   return Math.ceil(minutes / 15) * 15;
 }
 
-export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsleep, selectedIds, onToggleSelect, sceneTheme, onFixWithAI }: Props) {
+export function DayTimeline({ date, activities, onEdit, onDelete, onBack, selectedIds, onToggleSelect, sceneTheme, onFixWithAI }: Props) {
   const sorted = [...activities]
     .filter((a) => a.start_time && a.end_time)
     .sort((a, b) => timeToMinutes(a.start_time!) - timeToMinutes(b.start_time!));

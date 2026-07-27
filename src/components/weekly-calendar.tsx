@@ -16,7 +16,6 @@ interface Props {
   onWeekChange: (date: Date) => void;
   activities: Activity[];
   onSelectDay: (date: Date) => void;
-  isAsleep: (hour: number) => boolean;
   onEdit: (a: Activity) => void;
   onFixWithAI: (a: Activity) => void;
   selectedIds: Set<string>;
@@ -42,7 +41,7 @@ function roundUpTo15(minutes: number): number {
   return Math.ceil(minutes / 15) * 15;
 }
 
-export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAsleep, onEdit, onFixWithAI, selectedIds, onToggleSelect, sceneTheme }: Props) {
+export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, onEdit, onFixWithAI, selectedIds, onToggleSelect, sceneTheme }: Props) {
   const days = useMemo(() => {
     const end = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
     return eachDayOfInterval({ start: currentWeekStart, end });

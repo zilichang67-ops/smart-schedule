@@ -46,6 +46,7 @@ export function ScheduleDashboard({ user }: Props) {
   const [fixingActivity, setFixingActivity] = useState<Activity | null>(null);
   const [userRole, setUserRole] = useState<UserRole>("student");
   const [showCompleted, setShowCompleted] = useState(true);
+  const [lastAiAction, setLastAiAction] = useState<{ type: string; data: Activity | Activity[] | null } | null>(null);
   const sleep = useSleepSettings();
   const bulk = useBulkSelection();
   const notif = useNotifications(activities);
@@ -67,7 +68,6 @@ export function ScheduleDashboard({ user }: Props) {
       }
     };
     loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, user.id]);
 
   useEffect(() => {
@@ -273,7 +273,12 @@ export function ScheduleDashboard({ user }: Props) {
     const match = activities.find(
       (a) => a.title.toLowerCase() === targetTitle.toLowerCase() && a.activity_date === targetDate
     );
-    if (!match) return;
+    if (!match) {
+      toast.error(`"${targetTitle}" not found`);
+      return;
+    }
+
+    const previous = { ...match };
 
     const { error } = await supabase.from("activities").update({
       ...(updates.title !== undefined && { title: updates.title }),
@@ -285,12 +290,10 @@ export function ScheduleDashboard({ user }: Props) {
 
     if (!error) {
       setActivities((prev) =>
-        prev.map((a) =>
-          a.id === match.id
-            ? { ...a, ...(updates as Partial<Activity>) }
-            : a
-        )
+        prev.map((a) => a.id === match.id ? { ...a, ...(updates as Partial<Activity>) } : a)
       );
+      setLastAiAction({ type: "modify", data: previous });
+      toast.success(`Modified "${match.title}"`);
     }
   };
 
@@ -299,13 +302,15 @@ export function ScheduleDashboard({ user }: Props) {
       (a) => a.title.toLowerCase() === targetTitle.toLowerCase() && a.activity_date === targetDate
     );
     if (!match) {
-      toast.error("Activity not found");
+      toast.error(`"${targetTitle}" not found`);
       return;
     }
 
+    const previous = { ...match };
     const { error } = await supabase.from("activities").delete().eq("id", match.id);
     if (!error) {
       setActivities((prev) => prev.filter((a) => a.id !== match.id));
+      setLastAiAction({ type: "delete", data: previous });
       toast.success(`Deleted "${match.title}"`);
     }
   };
@@ -319,9 +324,11 @@ export function ScheduleDashboard({ user }: Props) {
       return;
     }
 
+    const previous = { ...match };
+
     const { error } = await supabase.from("activities").update({
-      start_time: updates.start_time || match.start_time,
-      end_time: updates.end_time || match.end_time,
+      start_time: (updates.start_time as string) || match.start_time,
+      end_time: (updates.end_time as string) || match.end_time,
       activity_date: targetDate,
       is_scheduled: true,
       unscheduled_precision: null,
@@ -337,6 +344,7 @@ export function ScheduleDashboard({ user }: Props) {
             : a
         )
       );
+      setLastAiAction({ type: "schedule", data: previous });
       toast.success(`Scheduled "${match.title}" on ${targetDate}`);
     }
   };
@@ -362,8 +370,45 @@ export function ScheduleDashboard({ user }: Props) {
       if (filter.unscheduled_only) filtered = filtered.filter((a) => !a.is_scheduled);
       const ids = new Set(filtered.map((a) => a.id));
       setActivities((prev) => prev.filter((a) => !ids.has(a.id)));
+      setLastAiAction({ type: "bulk_delete", data: filtered });
       toast.success(`Deleted ${ids.size} activit${ids.size === 1 ? "y" : "ies"}`);
     }
+  };
+
+  const handleRevoke = async () => {
+    if (!lastAiAction) return;
+
+    if (lastAiAction.type === "delete" && lastAiAction.data) {
+      const a = lastAiAction.data as Activity;
+      const { data } = await supabase.from("activities").insert({
+        user_id: user.id, title: a.title, start_time: a.start_time, end_time: a.end_time,
+        notes: a.notes, is_scheduled: a.is_scheduled, activity_date: a.activity_date,
+        is_recurring: a.is_recurring, recurrence_pattern: a.recurrence_pattern,
+        is_completed: a.is_completed, unscheduled_precision: a.unscheduled_precision, target_date: a.target_date,
+      }).select();
+      if (data) setActivities((prev) => [...prev, ...data]);
+      toast.success("Activity restored");
+    } else if (lastAiAction.type === "modify" && lastAiAction.data) {
+      const a = lastAiAction.data as Activity;
+      await supabase.from("activities").update({
+        title: a.title, start_time: a.start_time, end_time: a.end_time,
+        notes: a.notes, activity_date: a.activity_date,
+      }).eq("id", a.id);
+      setActivities((prev) => prev.map((p) => p.id === a.id ? a : p));
+      toast.success("Changes reverted");
+    } else if (lastAiAction.type === "bulk_delete" && Array.isArray(lastAiAction.data)) {
+      const restored = lastAiAction.data.map((a) => ({
+        user_id: user.id, title: a.title, start_time: a.start_time, end_time: a.end_time,
+        notes: a.notes, is_scheduled: a.is_scheduled, activity_date: a.activity_date,
+        is_recurring: a.is_recurring, recurrence_pattern: a.recurrence_pattern,
+        is_completed: a.is_completed, unscheduled_precision: a.unscheduled_precision, target_date: a.target_date,
+      }));
+      const { data } = await supabase.from("activities").insert(restored).select();
+      if (data) setActivities((prev) => [...prev, ...data]);
+      toast.success(`Restored ${restored.length} activit${restored.length === 1 ? "y" : "ies"}`);
+    }
+
+    setLastAiAction(null);
   };
 
   const cycleView = () => {
@@ -411,7 +456,7 @@ export function ScheduleDashboard({ user }: Props) {
             {view === "week" && (
               <WeeklyCalendar
                 currentWeekStart={currentWeekStart} onWeekChange={setCurrentWeekStart}
-                activities={scheduled} onSelectDay={handleDaySelect} isAsleep={sleep.isAsleep}
+                activities={scheduled} onSelectDay={handleDaySelect}
                 onEdit={setEditingActivity} onFixWithAI={handleFixWithAI}
                 selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle}
                 sceneTheme={sceneTheme}
@@ -422,7 +467,7 @@ export function ScheduleDashboard({ user }: Props) {
                 date={selectedDay || new Date()}
                 activities={scheduled.filter((a) => a.activity_date === format(selectedDay || new Date(), "yyyy-MM-dd"))}
                 onEdit={setEditingActivity} onDelete={handleDeleteActivity}
-                onBack={() => setView("week")} isAsleep={sleep.isAsleep}
+                onBack={() => setView("week")}
                 selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
                 onFixWithAI={handleFixWithAI}
               />
@@ -463,8 +508,11 @@ export function ScheduleDashboard({ user }: Props) {
         onActivityDeleted={handleActivityDeleted}
         onScheduleUnscheduled={handleScheduleUnscheduled}
         onBulkDelete={handleBulkDelete}
+        onRevoke={handleRevoke}
+        lastAiAction={lastAiAction}
         today={today}
         existingActivities={activities}
+        userRole={userRole}
         fixingActivity={fixingActivity}
         onClearFixing={() => setFixingActivity(null)}
       />

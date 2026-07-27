@@ -14,6 +14,8 @@ interface Props {
   onActivityDeleted: (targetTitle: string, targetDate: string) => void;
   onScheduleUnscheduled: (targetTitle: string, targetDate: string, updates: Record<string, unknown>) => void;
   onBulkDelete: (filter: { date?: string | null; title?: string | null; unscheduled_only?: boolean | null; group_id?: string | null }) => void;
+  onRevoke: () => void;
+  lastAiAction: { type: string; data: Activity | Activity[] | null } | null;
   today: string;
   existingActivities: Activity[];
   userRole?: string;
@@ -28,7 +30,7 @@ const WELCOME: ChatMessage = {
 
 export function ChatAssistant({
   onActivityParsed, onActivityModified, onActivityDeleted,
-  onScheduleUnscheduled, onBulkDelete,
+  onScheduleUnscheduled, onBulkDelete, onRevoke, lastAiAction,
   today, existingActivities, userRole, fixingActivity, onClearFixing,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
@@ -150,6 +152,18 @@ export function ChatAssistant({
             <div className="bg-muted rounded-lg px-3 py-2 text-sm animate-pulse">
               {t.thinking}
             </div>
+          </div>
+        )}
+        {lastAiAction && !loading && (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRevoke}
+              className="text-xs text-muted-foreground border-dashed"
+            >
+              Undo last AI action
+            </Button>
           </div>
         )}
         <div ref={messagesEndRef} />
