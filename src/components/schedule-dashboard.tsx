@@ -178,7 +178,8 @@ export function ScheduleDashboard({ user }: Props) {
     }
 
     if (toInsert.length > 0) {
-      const { data } = await supabase.from("activities").insert(toInsert).select();
+      const withUserId = toInsert.map((a) => ({ ...a, user_id: user.id }));
+      const { data } = await supabase.from("activities").insert(withUserId).select();
       if (data) setActivities((prev) => [...prev, ...data]);
     }
   };
@@ -194,7 +195,8 @@ export function ScheduleDashboard({ user }: Props) {
         ? pendingActivities.filter((a) => !a.start_time || !a.end_time || !a.activity_date || !checkConflict({ ...a, id: "", user_id: user.id, created_at: "" }))
         : pendingActivities;
       if (remaining.length > 0) {
-        const { data } = await supabase.from("activities").insert(remaining).select();
+        const withUserId = remaining.map((a) => ({ ...a, user_id: user.id }));
+        const { data } = await supabase.from("activities").insert(withUserId).select();
         if (data) setActivities((prev) => [...prev, ...data]);
       }
     }
