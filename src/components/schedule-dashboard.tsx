@@ -206,9 +206,16 @@ export function ScheduleDashboard({ user }: Props) {
   };
 
   const handleDeleteActivity = async (id: string) => {
+    const match = activities.find((a) => a.id === id);
     const { error } = await supabase.from("activities").delete().eq("id", id);
-    if (!error) setActivities((prev) => prev.filter((a) => a.id !== id));
-    setEditingActivity(null);
+    if (error) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete: " + error.message);
+    } else {
+      setActivities((prev) => prev.filter((a) => a.id !== id));
+      setEditingActivity(null);
+      if (match) toast.success(`Deleted "${match.title}"`);
+    }
   };
 
   const handleBulkDeleteSelected = async () => {

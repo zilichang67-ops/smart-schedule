@@ -63,7 +63,7 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, onEd
   );
 
   const visibleHours = useMemo(() => {
-    let maxEndHour = 24;
+    let maxEndHour = 22;
     for (const a of activities) {
       if (a.start_time && a.end_time) {
         const endMin = timeToMinutes(a.end_time);
@@ -71,7 +71,7 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, onEd
         if (endHour > maxEndHour) maxEndHour = endHour;
       }
     }
-    const roundedMax = Math.max(roundUpTo15(maxEndHour * 60) / 60, 24);
+    const roundedMax = roundUpTo15(maxEndHour * 60) / 60;
     const hours: number[] = [];
     for (let h = 0; h <= Math.min(roundedMax, 25); h++) {
       hours.push(h);
