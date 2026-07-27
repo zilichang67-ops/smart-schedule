@@ -8,7 +8,6 @@ import { type Activity, type UserRole, type SceneThemeId } from "@/types/activit
 import { startOfWeek, format, addDays, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useSleepSettings } from "@/hooks/use-sleep-settings";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
-import { useNotifications } from "@/hooks/use-notifications";
 import { applySceneTheme } from "@/lib/themes";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
@@ -49,7 +48,6 @@ export function ScheduleDashboard({ user }: Props) {
   const [lastAiAction, setLastAiAction] = useState<{ type: string; data: Activity | Activity[] | null } | null>(null);
   const sleep = useSleepSettings();
   const bulk = useBulkSelection();
-  const notif = useNotifications(activities);
   const supabase = createClient();
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -432,8 +430,6 @@ export function ScheduleDashboard({ user }: Props) {
         onPrev={handlePrev} onNext={handleNext}
         onJumpToDate={handleJumpToDate} currentDate={selectedDay || currentWeekStart}
         onOpenSettings={() => setSleepOpen(true)} onOpenProfile={() => setProfileOpen(true)}
-        onRequestNotifications={notif.requestPermission}
-        notificationPermission={notif.permission}
         showCompleted={showCompleted}
         onToggleShowCompleted={() => setShowCompleted(!showCompleted)}
         bulkCount={bulk.count} onBulkDelete={handleBulkDeleteSelected}

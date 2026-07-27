@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, Trash2, Moon, Settings, CheckSquare, X, ChevronLeft, ChevronRight, Bell, Eye, EyeOff } from "lucide-react";
+import { Zap, LogOut, Trash2, Moon, Settings, CheckSquare, X, ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
 import { JumpToDate } from "@/components/jump-to-date";
 import { useI18n } from "@/i18n/context";
 
@@ -21,8 +21,6 @@ interface Props {
   currentDate: Date;
   onOpenSettings: () => void;
   onOpenProfile: () => void;
-  onRequestNotifications: () => void;
-  notificationPermission: string;
   bulkCount: number;
   onBulkDelete: () => void;
   onBulkClear: () => void;
@@ -35,7 +33,6 @@ interface Props {
 export function Header({
   user, onClearAll, activityCount, view, onToggleView, onToday,
   onPrev, onNext, onJumpToDate, currentDate,   onOpenSettings, onOpenProfile,
-  onRequestNotifications, notificationPermission,
   bulkCount, onBulkDelete, onBulkClear, bulkMode, onToggleBulkMode,
   showCompleted, onToggleShowCompleted,
 }: Props) {
@@ -92,11 +89,6 @@ export function Header({
         <Button variant="ghost" size="sm" onClick={onToggleShowCompleted} className={`h-8 gap-1.5 ${showCompleted ? "text-primary" : "text-muted-foreground"}`} title={showCompleted ? "Hide done" : "Show done"}>
           {showCompleted ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </Button>
-        {notificationPermission !== "granted" && (
-          <Button variant="ghost" size="sm" onClick={onRequestNotifications} className="h-8 gap-1.5" title={t.reminders}>
-            <Bell className="h-4 w-4" />
-          </Button>
-        )}
         <Button variant="ghost" size="sm" onClick={onToggleBulkMode} className={`h-8 gap-1.5 ${bulkMode ? "text-primary" : ""}`}>
           <CheckSquare className="h-4 w-4" />
         </Button>
