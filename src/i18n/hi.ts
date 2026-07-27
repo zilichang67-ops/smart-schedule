@@ -131,15 +131,6 @@ export const hi: Translations = {
   passwordUpdatedLogin: "पासवर्ड अपडेट हो गया! कृपया लॉग इन करें।",
   invalidResetLink: "लिंक अमान्य या समाप्त हो गया। कृपया फिर से अनुरोध करें।",
 
-  groupSuggestion1: "स्कूल",
-  groupSuggestion2: "व्यक्तिगत",
-  groupSuggestion3: "विज्ञान",
-  groupSuggestion4: "शारीरिक शिक्षा",
-  groupSuggestion5: "कार्य",
-  groupSuggestion6: "प्रोजेक्ट",
-  groupSuggestion7: "बैठकें",
-  groupSuggestion8: "गहन कार्य",
-
   aiHintStudent: "जैसे: शाम 4 बजे गणित होमवर्क, केमिस्ट्री परीक्षा की तैयारी",
   aiHintWorker: "जैसे: सुबह 10 बजे टीम मीटिंग, दोपहर 2-4 बजे गहन कार्य",
 };

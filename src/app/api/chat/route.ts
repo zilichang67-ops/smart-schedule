@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
-import { type ChatMessage, type Activity, type ActivityGroup } from "@/types/activity";
+import { type ChatMessage, type Activity } from "@/types/activity";
 
 export const runtime = "nodejs";
 
@@ -63,7 +63,7 @@ RULES:
 
 export async function POST(request: Request) {
   try {
-    const { messages, today, existingActivities, existingGroups, userRole } = await request.json();
+    const { messages, today, existingActivities, userRole } = await request.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Messages array required." }, { status: 400 });
@@ -72,14 +72,10 @@ export async function POST(request: Request) {
     const scheduled = existingActivities?.filter((a: Activity) => a.is_scheduled) || [];
     const unscheduled = existingActivities?.filter((a: Activity) => !a.is_scheduled) || [];
 
-    const groupContext = existingGroups?.length
-      ? `\n\nAVAILABLE GROUPS:\n${existingGroups.map((g: ActivityGroup) => `- "${g.name}" (id: ${g.id}, color: ${g.color_hex || 'none'}${g.parent_group_id ? `, parent: ${existingGroups.find((p: ActivityGroup) => p.id === g.parent_group_id)?.name || 'unknown'}` : ''})`).join("\n")}`
-      : "";
-
     const activityContext = `\n\nEXISTING ACTIVITIES:\nSCHEDULED:\n${scheduled.map((a: Activity) =>
-      `- "${a.title}" on ${a.activity_date} ${a.start_time || '??:??'}-${a.end_time || '??:??'}${a.group_id ? ` [group: ${existingGroups?.find((g: ActivityGroup) => g.id === a.group_id)?.name || 'unknown'}]` : ''} (id: ${a.id})`
+      `- "${a.title}" on ${a.activity_date} ${a.start_time || '??:??'}-${a.end_time || '??:??'} (id: ${a.id})`
     ).join("\n") || "(none)"}\n\nUNSCHEDULED POOL:\n${unscheduled.map((a: Activity) =>
-      `- "${a.title}" [precision: ${a.unscheduled_precision || 'NONE'}] ${a.target_date ? `(target: ${a.target_date})` : '(no date)'}${a.group_id ? ` [group: ${existingGroups?.find((g: ActivityGroup) => g.id === a.group_id)?.name || 'unknown'}]` : ''} (id: ${a.id})`
+      `- "${a.title}" [precision: ${a.unscheduled_precision || 'NONE'}] ${a.target_date ? `(target: ${a.target_date})` : '(no date)'} (id: ${a.id})`
     ).join("\n") || "(none)"}`;
 
     const roleContext = userRole === "worker"
@@ -89,7 +85,7 @@ export async function POST(request: Request) {
     const groqMessages = [
       {
         role: "system" as const,
-        content: SYSTEM_PROMPT.replace("{{ROLE_CONTEXT}}", roleContext) + `\n\nToday's date: ${today || new Date().toISOString().split("T")[0]}` + groupContext + activityContext,
+        content: SYSTEM_PROMPT.replace("{{ROLE_CONTEXT}}", roleContext) + `\n\nToday's date: ${today || new Date().toISOString().split("T")[0]}` + activityContext,
       },
       ...messages.map((m: ChatMessage) => ({
         role: m.role as "user" | "assistant",

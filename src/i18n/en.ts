@@ -146,16 +146,6 @@ export interface Translations {
   passwordUpdatedLogin: string;
   invalidResetLink: string;
 
-  // Role-based group suggestions
-  groupSuggestion1: string;
-  groupSuggestion2: string;
-  groupSuggestion3: string;
-  groupSuggestion4: string;
-  groupSuggestion5: string;
-  groupSuggestion6: string;
-  groupSuggestion7: string;
-  groupSuggestion8: string;
-
   // Role-based AI hints
   aiHintStudent: string;
   aiHintWorker: string;
@@ -293,16 +283,6 @@ export const en: Translations = {
   updateMyPassword: "Update My Password",
   passwordUpdatedLogin: "Password updated! Please sign in.",
   invalidResetLink: "Invalid or expired reset link. Please request a new one.",
-
-  // Role-based group suggestions
-  groupSuggestion1: "School",
-  groupSuggestion2: "Personal",
-  groupSuggestion3: "STEM",
-  groupSuggestion4: "P.E.",
-  groupSuggestion5: "Work",
-  groupSuggestion6: "Projects",
-  groupSuggestion7: "Meetings",
-  groupSuggestion8: "Deep Work",
 
   // Role-based AI hints
   aiHintStudent: "e.g. Math homework at 4pm, study for chemistry exam",

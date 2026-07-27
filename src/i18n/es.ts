@@ -131,15 +131,6 @@ export const es: Translations = {
   passwordUpdatedLogin: "¡Contraseña actualizada! Inicia sesión.",
   invalidResetLink: "Enlace inválido o expirado. Solicita uno nuevo.",
 
-  groupSuggestion1: "Escuela",
-  groupSuggestion2: "Personal",
-  groupSuggestion3: "STEM",
-  groupSuggestion4: "Educación Física",
-  groupSuggestion5: "Trabajo",
-  groupSuggestion6: "Proyectos",
-  groupSuggestion7: "Reuniones",
-  groupSuggestion8: "Trabajo profundo",
-
   aiHintStudent: "ej: Tarea de matemáticas a las 4pm, estudiar para examen de química",
   aiHintWorker: "ej: Reunión de equipo a las 10am, bloque de trabajo profundo 2-4pm",
 };

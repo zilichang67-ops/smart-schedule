@@ -131,15 +131,6 @@ export const vi: Translations = {
   passwordUpdatedLogin: "Đã cập nhật mật khẩu! Vui lòng đăng nhập.",
   invalidResetLink: "Liên kết không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu lại.",
 
-  groupSuggestion1: "Trường học",
-  groupSuggestion2: "Cá nhân",
-  groupSuggestion3: "Khoa học",
-  groupSuggestion4: "Thể dục",
-  groupSuggestion5: "Công việc",
-  groupSuggestion6: "Dự án",
-  groupSuggestion7: "Cuộc họp",
-  groupSuggestion8: "Làm việc tập trung",
-
   aiHintStudent: "VD: Bài tập toán lúc 4h chiều, ôn thi hóa học",
   aiHintWorker: "VD: Standup lúc 10h sáng, block làm việc tập trung 2-4h chiều",
 };

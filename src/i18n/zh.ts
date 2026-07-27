@@ -131,15 +131,6 @@ export const zh: Translations = {
   passwordUpdatedLogin: "密码已更新！请登录。",
   invalidResetLink: "链接无效或已过期。请重新请求。",
 
-  groupSuggestion1: "学校",
-  groupSuggestion2: "个人",
-  groupSuggestion3: "理工科",
-  groupSuggestion4: "体育",
-  groupSuggestion5: "工作",
-  groupSuggestion6: "项目",
-  groupSuggestion7: "会议",
-  groupSuggestion8: "深度工作",
-
   aiHintStudent: "例如：下午4点数学作业，复习化学考试",
   aiHintWorker: "例如：上午10点团队例会，下午2-4点深度工作",
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { type ChatMessage, type Activity, type ActivityGroup } from "@/types/activity";
+import { type ChatMessage, type Activity } from "@/types/activity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,6 @@ interface Props {
   onBulkDelete: (filter: { date?: string | null; title?: string | null; unscheduled_only?: boolean | null; group_id?: string | null }) => void;
   today: string;
   existingActivities: Activity[];
-  existingGroups: ActivityGroup[];
   userRole?: string;
   fixingActivity?: Activity | null;
   onClearFixing?: () => void;
@@ -30,7 +29,7 @@ const WELCOME: ChatMessage = {
 export function ChatAssistant({
   onActivityParsed, onActivityModified, onActivityDeleted,
   onScheduleUnscheduled, onBulkDelete,
-  today, existingActivities, existingGroups, userRole, fixingActivity, onClearFixing,
+  today, existingActivities, userRole, fixingActivity, onClearFixing,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [input, setInput] = useState("");
@@ -60,7 +59,6 @@ export function ChatAssistant({
           messages: newMsgs,
           today,
           existingActivities,
-          existingGroups,
           userRole: userRole || "student",
         }),
       });
@@ -91,7 +89,7 @@ export function ChatAssistant({
       setLoading(false);
       onClearFixing?.();
     }
-  }, [today, existingActivities, existingGroups, userRole, onActivityParsed, onActivityModified, onActivityDeleted, onScheduleUnscheduled, onBulkDelete, onClearFixing]);
+  }, [today, existingActivities, userRole, onActivityParsed, onActivityModified, onActivityDeleted, onScheduleUnscheduled, onBulkDelete, onClearFixing]);
 
   useEffect(() => {
     if (fixingActivity && open && fixingRef.current !== fixingActivity.id) {

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { format, isSameMonth, isSameDay, isWithinInterval, startOfWeek, endOfWeek, addWeeks } from "date-fns";
-import { type Activity, type ActivityGroup } from "@/types/activity";
+import { type Activity } from "@/types/activity";
 import { Pencil, Trash2, GripVertical, Clock, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +17,6 @@ interface Props {
   compact?: boolean;
   currentMonth?: Date;
   currentDay?: Date;
-  groups: ActivityGroup[];
 }
 
 function BucketItem({ activity, onEdit, onDelete, groupColor }: { activity: Activity; onEdit: (a: Activity) => void; onDelete: (id: string) => void; groupColor?: string | null }) {
@@ -59,7 +58,7 @@ function BucketItem({ activity, onEdit, onDelete, groupColor }: { activity: Acti
   );
 }
 
-export function UnscheduledPool({ activities, onEdit, onDelete, compact, currentMonth, currentDay, groups }: Props) {
+export function UnscheduledPool({ activities, onEdit, onDelete, compact, currentMonth, currentDay }: Props) {
   const [rangeWeeks, setRangeWeeks] = useState(2);
   const { t } = useI18n();
 
@@ -164,7 +163,7 @@ export function UnscheduledPool({ activities, onEdit, onDelete, compact, current
 
         <TabsContent value="all" className="space-y-3 mt-3">
           {activities.length === 0 ? <EmptyState label={t.noUnscheduledItems} /> : activities.map((a) => (
-            <BucketItem key={a.id} activity={a} onEdit={onEdit} onDelete={onDelete} groupColor={a.group_id ? groups.find(g => g.id === a.group_id)?.color_hex : undefined} />
+            <BucketItem key={a.id} activity={a} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </TabsContent>
 

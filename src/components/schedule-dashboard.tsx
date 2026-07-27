@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { type Activity, type ActivityGroup, type UserRole, type SceneThemeId } from "@/types/activity";
+import { type Activity, type UserRole, type SceneThemeId } from "@/types/activity";
 import { startOfWeek, format, addDays, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useSleepSettings } from "@/hooks/use-sleep-settings";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
@@ -23,7 +23,6 @@ import { ConflictModal, type ConflictInfo } from "@/components/conflict-modal";
 import { ChatAssistant } from "@/components/chat-assistant";
 import { SleepSettingsDialog } from "@/components/sleep-settings-dialog";
 import { ProfileDialog } from "@/components/profile-dialog";
-import { GroupManager } from "@/components/group-manager";
 
 interface Props {
   user: User;
@@ -46,8 +45,6 @@ export function ScheduleDashboard({ user }: Props) {
   const [sceneTheme, setSceneTheme] = useState<SceneThemeId>("indigo");
   const [bulkMode, setBulkMode] = useState(false);
   const [fixingActivity, setFixingActivity] = useState<Activity | null>(null);
-  const [groups, setGroups] = useState<ActivityGroup[]>([]);
-  const [groupManagerOpen, setGroupManagerOpen] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>("student");
   const [showCompleted, setShowCompleted] = useState(true);
   const sleep = useSleepSettings();
@@ -102,14 +99,6 @@ export function ScheduleDashboard({ user }: Props) {
       if (data) setActivities(data);
     };
     fetch();
-  }, [supabase, user.id]);
-
-  useEffect(() => {
-    const fetchGroups = async () => {
-      const { data } = await supabase.from("activity_groups").select("*").eq("user_id", user.id).order("name");
-      if (data) setGroups(data);
-    };
-    fetchGroups();
   }, [supabase, user.id]);
 
   const timeToMinutes = (t: string): number => {
@@ -395,7 +384,6 @@ export function ScheduleDashboard({ user }: Props) {
         onPrev={handlePrev} onNext={handleNext}
         onJumpToDate={handleJumpToDate} currentDate={selectedDay || currentWeekStart}
         onOpenSettings={() => setSleepOpen(true)} onOpenProfile={() => setProfileOpen(true)}
-        onOpenGroups={() => setGroupManagerOpen(true)}
         onRequestNotifications={notif.requestPermission}
         notificationPermission={notif.permission}
         showCompleted={showCompleted}
@@ -454,7 +442,6 @@ export function ScheduleDashboard({ user }: Props) {
               onDelete={handleDeleteActivity}
               currentMonth={monthView}
               currentDay={selectedDay || undefined}
-              groups={groups}
             />
           </div>
         </div>
@@ -464,7 +451,7 @@ export function ScheduleDashboard({ user }: Props) {
         <InputPanel onParse={handleParseComplete} parsing={parsing} setParsing={setParsing} compact />
       </div>
       <div className="lg:hidden border-t border-border/50">
-        <UnscheduledPool activities={unscheduled} onEdit={setEditingActivity} onDelete={handleDeleteActivity} compact currentMonth={monthView} currentDay={selectedDay || undefined} groups={groups} />
+        <UnscheduledPool activities={unscheduled} onEdit={setEditingActivity} onDelete={handleDeleteActivity} compact currentMonth={monthView} currentDay={selectedDay || undefined} />
       </div>
 
       <ChatAssistant
@@ -475,15 +462,12 @@ export function ScheduleDashboard({ user }: Props) {
         onBulkDelete={handleBulkDelete}
         today={today}
         existingActivities={activities}
-        existingGroups={groups}
-        userRole={userRole}
         fixingActivity={fixingActivity}
         onClearFixing={() => setFixingActivity(null)}
       />
 
       <SleepSettingsDialog open={sleepOpen} onOpenChange={setSleepOpen} settings={sleep.settings} onUpdate={sleep.update} onReset={sleep.reset} />
       <ProfileDialog user={user} open={profileOpen} onOpenChange={setProfileOpen} onThemeChange={(t) => { setSceneTheme(t); applySceneTheme(t); }} onRoleChange={setUserRole} />
-      <GroupManager user={user} open={groupManagerOpen} onOpenChange={setGroupManagerOpen} groups={groups} onGroupsChange={setGroups} />
 
       {editingActivity && (
         <ActivityModal activity={editingActivity} onSave={handleUpdateActivity} onDelete={handleDeleteActivity} onClose={() => setEditingActivity(null)} />
