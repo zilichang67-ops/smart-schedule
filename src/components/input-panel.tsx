@@ -37,9 +37,15 @@ export function InputPanel({ onParse, parsing, setParsing, compact }: Props) {
         return;
       }
 
+      if (!data.activities || data.activities.length === 0) {
+        setError("No activities found in your notes.");
+        return;
+      }
+
       await onParse(data.activities);
       setText("");
-    } catch {
+    } catch (e) {
+      console.error("Parse error:", e);
       setError("Network error. Please try again.");
     } finally {
       setParsing(false);

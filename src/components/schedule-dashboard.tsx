@@ -168,8 +168,14 @@ export function ScheduleDashboard({ user }: Props) {
 
     if (toInsert.length > 0) {
       const withUserId = toInsert.map((a) => ({ ...a, user_id: user.id }));
-      const { data } = await supabase.from("activities").insert(withUserId).select();
-      if (data) setActivities((prev) => [...prev, ...data]);
+      const { data, error } = await supabase.from("activities").insert(withUserId).select();
+      if (error) {
+        console.error("Insert error:", error);
+        toast.error("Failed to save: " + error.message);
+      } else if (data) {
+        setActivities((prev) => [...prev, ...data]);
+        toast.success(`Added ${data.length} activit${data.length === 1 ? "y" : "ies"}`);
+      }
     }
   };
 
