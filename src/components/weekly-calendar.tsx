@@ -65,16 +65,6 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAs
 
   const visibleHours = useMemo(() => {
     let maxEndHour = 24;
-    const hasSleepActivity = activities.some((a) => {
-      if (!a.start_time || !a.end_time) return false;
-      const startH = Math.floor(timeToMinutes(a.start_time) / 60);
-      const endH = Math.ceil(timeToMinutes(a.end_time) / 60);
-      for (let h = startH; h < endH; h++) {
-        if (isAsleep(h)) return true;
-      }
-      return false;
-    });
-
     for (const a of activities) {
       if (a.start_time && a.end_time) {
         const endMin = timeToMinutes(a.end_time);
@@ -82,13 +72,13 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAs
         if (endHour > maxEndHour) maxEndHour = endHour;
       }
     }
-    const roundedMax = roundUpTo15(maxEndHour * 60) / 60;
+    const roundedMax = Math.max(roundUpTo15(maxEndHour * 60) / 60, 24);
     const hours: number[] = [];
-    for (let h = 0; h < Math.min(roundedMax, 25); h++) {
-      if (!isAsleep(h) || hasSleepActivity) hours.push(h);
+    for (let h = 0; h <= Math.min(roundedMax, 25); h++) {
+      hours.push(h);
     }
     return hours;
-  }, [activities, isAsleep]);
+  }, [activities]);
 
   return (
     <div className="flex flex-col h-full">
