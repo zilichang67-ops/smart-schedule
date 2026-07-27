@@ -7,8 +7,6 @@ import { getAdjacentColors } from "@/lib/themes";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Clock, Pencil, Trash2, Sparkles } from "lucide-react";
 
-import { formatTimeInZone } from "@/hooks/use-timezone";
-
 interface Props {
   date: Date;
   activities: Activity[];
@@ -20,7 +18,6 @@ interface Props {
   onToggleSelect: (id: string) => void;
   sceneTheme: SceneThemeId;
   onFixWithAI: (a: Activity) => void;
-  timezone: string;
 }
 
 const HOUR_HEIGHT = 64;
@@ -41,7 +38,7 @@ function roundUpTo15(minutes: number): number {
   return Math.ceil(minutes / 15) * 15;
 }
 
-export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsleep, selectedIds, onToggleSelect, sceneTheme, onFixWithAI, timezone }: Props) {
+export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsleep, selectedIds, onToggleSelect, sceneTheme, onFixWithAI }: Props) {
   const sorted = [...activities]
     .filter((a) => a.start_time && a.end_time)
     .sort((a, b) => timeToMinutes(a.start_time!) - timeToMinutes(b.start_time!));
@@ -137,7 +134,7 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, isAsle
                     <div className="flex items-center gap-2 text-xs opacity-70 mt-0.5">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {isMilestone ? formatTimeInZone(activity.start_time!, timezone) : `${formatTimeInZone(activity.start_time!, timezone)} - ${formatTimeInZone(activity.end_time!, timezone)}`}
+                        {isMilestone ? activity.start_time : `${activity.start_time} - ${activity.end_time}`}
                       </span>
                       {activity.notes && <span className="truncate">{activity.notes}</span>}
                       {activity.is_recurring && <span className="text-[10px] bg-white/20 rounded px-1">recurring</span>}

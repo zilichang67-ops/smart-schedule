@@ -10,7 +10,6 @@ import {
 } from "date-fns";
 import { type Activity, type SceneThemeId } from "@/types/activity";
 import { getAdjacentColors } from "@/lib/themes";
-import { formatTimeInZone } from "@/hooks/use-timezone";
 
 interface Props {
   currentWeekStart: Date;
@@ -23,7 +22,6 @@ interface Props {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   sceneTheme: SceneThemeId;
-  timezone: string;
 }
 
 const HOUR_HEIGHT = 48;
@@ -44,7 +42,7 @@ function roundUpTo15(minutes: number): number {
   return Math.ceil(minutes / 15) * 15;
 }
 
-export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAsleep, onEdit, onFixWithAI, selectedIds, onToggleSelect, sceneTheme, timezone }: Props) {
+export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAsleep, onEdit, onFixWithAI, selectedIds, onToggleSelect, sceneTheme }: Props) {
   const days = useMemo(() => {
     const end = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
     return eachDayOfInterval({ start: currentWeekStart, end });
@@ -166,7 +164,7 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAs
                                 <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z"/></svg>
                               </button>
                             </div>
-                            <p className="text-[9px] opacity-70 truncate">{formatTimeInZone(activity.start_time!, timezone)}-{formatTimeInZone(activity.end_time!, timezone)}</p>
+                            <p className="text-[9px] opacity-70 truncate">{activity.start_time}-{activity.end_time}</p>
                           </div>
                         );
                       })}

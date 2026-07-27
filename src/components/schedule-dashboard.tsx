@@ -417,7 +417,7 @@ export function ScheduleDashboard({ user }: Props) {
                 activities={scheduled} onSelectDay={handleDaySelect} isAsleep={sleep.isAsleep}
                 onEdit={setEditingActivity} onFixWithAI={handleFixWithAI}
                 selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle}
-                sceneTheme={sceneTheme} timezone={tz.timezone}
+                sceneTheme={sceneTheme}
               />
             )}
             {view === "day" && (
@@ -427,7 +427,7 @@ export function ScheduleDashboard({ user }: Props) {
                 onEdit={setEditingActivity} onDelete={handleDeleteActivity}
                 onBack={() => setView("week")} isAsleep={sleep.isAsleep}
                 selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
-                onFixWithAI={handleFixWithAI} timezone={tz.timezone}
+                onFixWithAI={handleFixWithAI}
               />
             )}
             {view === "month" && (
@@ -435,7 +435,7 @@ export function ScheduleDashboard({ user }: Props) {
                 activities={scheduled} onSelectDay={handleDaySelect}
                 onEdit={setEditingActivity} selectedIds={bulk.selectedIds}
                 onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
-                month={monthView} timezone={tz.timezone}
+                month={monthView}
               />
             )}
           </div>
