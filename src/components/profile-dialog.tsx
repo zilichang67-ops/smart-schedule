@@ -16,10 +16,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { User, Palette, Lock, Check, Sun, Moon, Monitor, GraduationCap, Briefcase, Globe, Clock } from "lucide-react";
+import { User, Palette, Lock, Check, Sun, Moon, Monitor, GraduationCap, Briefcase, Globe } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { type Locale } from "@/i18n/en";
-import { getAllTimezones } from "@/hooks/use-timezone";
 
 interface Props {
   user: SupabaseUser;
@@ -36,7 +35,6 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange, onRoleC
   const [sceneTheme, setSceneTheme] = useState<SceneThemeId>("indigo");
   const [preferredLang, setPreferredLang] = useState<Locale>(currentLocale);
   const [userRole, setUserRole] = useState<UserRole>("student");
-  const [userTimezone, setUserTimezone] = useState("UTC");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [saving, setSaving] = useState(false);
@@ -56,9 +54,6 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange, onRoleC
         if (data.user_role) {
           setUserRole(data.user_role as UserRole);
         }
-        if (data.timezone) {
-          setUserTimezone(data.timezone);
-        }
       }
     };
     load();
@@ -70,7 +65,7 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange, onRoleC
     setI18nLocale(preferredLang);
     const { error } = await supabase
       .from("user_profiles")
-      .upsert({ id: user.id, display_name: displayName, scene_color_theme: sceneTheme, preferred_language: preferredLang, user_role: userRole, timezone: userTimezone });
+      .upsert({ id: user.id, display_name: displayName, scene_color_theme: sceneTheme, preferred_language: preferredLang, user_role: userRole });
 
     if (error) {
       setMsg("Failed to save profile.");
@@ -200,29 +195,6 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange, onRoleC
                   {t.worker}
                 </button>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Timezone
-              </CardTitle>
-              <CardDescription>Your local timezone for accurate scheduling</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <select
-                value={userTimezone}
-                onChange={(e) => setUserTimezone(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                {getAllTimezones().map((tz) => (
-                  <option key={tz.value} value={tz.value}>
-                    {tz.label} ({tz.offset})
-                  </option>
-                ))}
-              </select>
             </CardContent>
           </Card>
 
