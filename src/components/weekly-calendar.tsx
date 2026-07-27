@@ -72,18 +72,15 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, isAs
         const endMin = timeToMinutes(a.end_time);
         const endHour = Math.ceil(endMin / 60);
         if (endHour > maxEndHour) maxEndHour = endHour;
-        const startMin = timeToMinutes(a.start_time);
-        const startHour = Math.floor(startMin / 60);
-        if (startHour < 6 && startHour >= 0) maxEndHour = 24;
       }
     }
     const roundedMax = roundUpTo15(maxEndHour * 60) / 60;
     const hours: number[] = [];
-    for (let h = 0; h <= Math.min(roundedMax, 24); h++) {
-      if (!isAsleep(h)) hours.push(h);
+    for (let h = 0; h < Math.min(roundedMax, 25); h++) {
+      hours.push(h);
     }
     return hours;
-  }, [activities, isAsleep]);
+  }, [activities]);
 
   return (
     <div className="flex flex-col h-full">
