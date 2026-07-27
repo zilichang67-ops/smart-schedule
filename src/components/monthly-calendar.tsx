@@ -13,6 +13,7 @@ import {
 } from "date-fns";
 import { type Activity, type SceneThemeId } from "@/types/activity";
 import { getAdjacentColors } from "@/lib/themes";
+import { formatTimeInZone } from "@/hooks/use-timezone";
 
 interface Props {
   activities: Activity[];
@@ -22,9 +23,10 @@ interface Props {
   onToggleSelect: (id: string) => void;
   sceneTheme: SceneThemeId;
   month: Date;
+  timezone: string;
 }
 
-export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, onToggleSelect, sceneTheme, month }: Props) {
+export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, onToggleSelect, sceneTheme, month, timezone }: Props) {
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -92,7 +94,7 @@ export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, 
                         }}
                       >
                         {isMilestone && <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: bg }} />}
-                        <span className="opacity-70">{a.start_time}</span> {a.title}
+                        <span className="opacity-70">{formatTimeInZone(a.start_time!, timezone)}</span> {a.title}
                       </div>
                     );
                   })}

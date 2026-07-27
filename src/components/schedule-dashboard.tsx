@@ -439,7 +439,7 @@ export function ScheduleDashboard({ user }: Props) {
                 activities={scheduled} onSelectDay={handleDaySelect}
                 onEdit={setEditingActivity} selectedIds={bulk.selectedIds}
                 onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
-                month={monthView}
+                month={monthView} timezone={tz.timezone}
               />
             )}
           </div>
