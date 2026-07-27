@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { type Activity, type UserRole, type SceneThemeId } from "@/types/activity";
+import { type Activity, type DayLabel, type UserRole, type SceneThemeId } from "@/types/activity";
 import { startOfWeek, format, addDays, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useSleepSettings } from "@/hooks/use-sleep-settings";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
@@ -21,6 +21,7 @@ import { ConflictModal, type ConflictInfo } from "@/components/conflict-modal";
 import { ChatAssistant } from "@/components/chat-assistant";
 import { SleepSettingsDialog } from "@/components/sleep-settings-dialog";
 import { ProfileDialog } from "@/components/profile-dialog";
+import { DayLabelManager } from "@/components/day-label-manager";
 
 interface Props {
   user: User;
@@ -46,6 +47,9 @@ export function ScheduleDashboard({ user }: Props) {
   const [userRole, setUserRole] = useState<UserRole>("student");
   const [showCompleted, setShowCompleted] = useState(true);
   const [lastAiAction, setLastAiAction] = useState<{ type: string; data: Activity | Activity[] | null } | null>(null);
+  const [labels, setLabels] = useState<DayLabel[]>([]);
+  const [labelManagerOpen, setLabelManagerOpen] = useState(false);
+  const [labelManagerDate, setLabelManagerDate] = useState(new Date());
   const sleep = useSleepSettings();
   const bulk = useBulkSelection();
   const supabase = createClient();
@@ -94,6 +98,14 @@ export function ScheduleDashboard({ user }: Props) {
       if (data) setActivities(data);
     };
     fetch();
+  }, [supabase, user.id]);
+
+  useEffect(() => {
+    const fetchLabels = async () => {
+      const { data } = await supabase.from("day_labels").select("*").eq("user_id", user.id);
+      if (data) setLabels(data);
+    };
+    fetchLabels();
   }, [supabase, user.id]);
 
   const timeToMinutes = (t: string): number => {
@@ -236,6 +248,11 @@ export function ScheduleDashboard({ user }: Props) {
   };
 
   const handleDaySelect = (day: Date) => { setSelectedDay(day); setView("day"); };
+
+  const handleOpenLabels = (day: Date) => {
+    setLabelManagerDate(day);
+    setLabelManagerOpen(true);
+  };
 
   const handleToday = () => {
     const now = new Date();
@@ -462,7 +479,7 @@ export function ScheduleDashboard({ user }: Props) {
                 activities={scheduled} onSelectDay={handleDaySelect}
                 onEdit={setEditingActivity} onFixWithAI={handleFixWithAI}
                 selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle}
-                sceneTheme={sceneTheme}
+                sceneTheme={sceneTheme} labels={labels} onOpenLabels={handleOpenLabels}
               />
             )}
             {view === "day" && (
@@ -472,7 +489,7 @@ export function ScheduleDashboard({ user }: Props) {
                 onEdit={setEditingActivity} onDelete={handleDeleteActivity}
                 onBack={() => setView("week")}
                 selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
-                onFixWithAI={handleFixWithAI}
+                onFixWithAI={handleFixWithAI} labels={labels.filter((l) => l.label_date === format(selectedDay || new Date(), "yyyy-MM-dd"))}
               />
             )}
             {view === "month" && (
@@ -480,7 +497,7 @@ export function ScheduleDashboard({ user }: Props) {
                 activities={scheduled} onSelectDay={handleDaySelect}
                 onEdit={setEditingActivity} selectedIds={bulk.selectedIds}
                 onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
-                month={monthView}
+                month={monthView} labels={labels} onOpenLabels={handleOpenLabels}
               />
             )}
           </div>
@@ -522,6 +539,7 @@ export function ScheduleDashboard({ user }: Props) {
 
       <SleepSettingsDialog open={sleepOpen} onOpenChange={setSleepOpen} settings={sleep.settings} onUpdate={sleep.update} onReset={sleep.reset} />
       <ProfileDialog user={user} open={profileOpen} onOpenChange={setProfileOpen} onThemeChange={(t) => { setSceneTheme(t); applySceneTheme(t); }} onRoleChange={setUserRole} />
+      <DayLabelManager user={user} date={labelManagerDate} open={labelManagerOpen} onOpenChange={setLabelManagerOpen} labels={labels} onLabelsChange={setLabels} />
 
       {editingActivity && (
         <ActivityModal activity={editingActivity} onSave={handleUpdateActivity} onDelete={handleDeleteActivity} onClose={() => setEditingActivity(null)} />

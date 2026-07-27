@@ -8,7 +8,7 @@ import {
   isSameDay,
   isToday,
 } from "date-fns";
-import { type Activity, type SceneThemeId } from "@/types/activity";
+import { type Activity, type DayLabel, type SceneThemeId } from "@/types/activity";
 import { getAdjacentColors } from "@/lib/themes";
 
 interface Props {
@@ -21,6 +21,8 @@ interface Props {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   sceneTheme: SceneThemeId;
+  labels: DayLabel[];
+  onOpenLabels: (day: Date) => void;
 }
 
 const HOUR_HEIGHT = 48;
@@ -41,7 +43,7 @@ function roundUpTo15(minutes: number): number {
   return Math.ceil(minutes / 15) * 15;
 }
 
-export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, onEdit, onFixWithAI, selectedIds, onToggleSelect, sceneTheme }: Props) {
+export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, onEdit, onFixWithAI, selectedIds, onToggleSelect, sceneTheme, labels, onOpenLabels }: Props) {
   const days = useMemo(() => {
     const end = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
     return eachDayOfInterval({ start: currentWeekStart, end });
@@ -84,16 +86,27 @@ export function WeeklyCalendar({ currentWeekStart, activities, onSelectDay, onEd
       <div className="flex-1 overflow-auto">
         <div className="grid grid-cols-[48px_repeat(7,1fr)] min-w-[700px]">
           <div className="border-r border-border/30" />
-          {days.map((day, i) => (
-            <div
-              key={i}
-              className={`border-r border-border/30 text-center py-2 cursor-pointer hover:bg-muted/30 transition-colors ${isToday(day) ? "bg-primary/5" : ""}`}
-              onClick={() => onSelectDay(day)}
-            >
-              <div className="text-xs text-muted-foreground">{format(day, "EEE")}</div>
-              <div className={`text-lg font-medium ${isToday(day) ? "text-primary" : ""}`}>{format(day, "d")}</div>
-            </div>
-          ))}
+          {days.map((day, i) => {
+            const dayLabels = labels.filter((l) => l.label_date === format(day, "yyyy-MM-dd"));
+            return (
+              <div
+                key={i}
+                className={`border-r border-border/30 text-center py-2 cursor-pointer hover:bg-muted/30 transition-colors ${isToday(day) ? "bg-primary/5" : ""}`}
+                onClick={() => onSelectDay(day)}
+                onDoubleClick={(e) => { e.stopPropagation(); onOpenLabels(day); }}
+              >
+                <div className="text-xs text-muted-foreground">{format(day, "EEE")}</div>
+                <div className={`text-lg font-medium ${isToday(day) ? "text-primary" : ""}`}>{format(day, "d")}</div>
+                {dayLabels.length > 0 && (
+                  <div className="flex justify-center gap-0.5 mt-0.5">
+                    {dayLabels.slice(0, 3).map((l) => (
+                      <div key={l.id} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: l.color }} title={l.title} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {visibleHours.map((hour) => (
             <div key={hour} className="contents">

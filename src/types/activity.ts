@@ -30,6 +30,15 @@ export interface ActivityGroup {
   created_at: string;
 }
 
+export interface DayLabel {
+  id: string;
+  user_id: string;
+  label_date: string;
+  title: string;
+  color: string;
+  created_at: string;
+}
+
 export interface ParsedActivity {
   title: string;
   start_time: string | null;

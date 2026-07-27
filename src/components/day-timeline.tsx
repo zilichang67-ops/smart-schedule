@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { type Activity, type SceneThemeId } from "@/types/activity";
+import { type Activity, type DayLabel, type SceneThemeId } from "@/types/activity";
 import { format } from "date-fns";
 import { getAdjacentColors } from "@/lib/themes";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ interface Props {
   onToggleSelect: (id: string) => void;
   sceneTheme: SceneThemeId;
   onFixWithAI: (a: Activity) => void;
+  labels: DayLabel[];
 }
 
 const HOUR_HEIGHT = 64;
@@ -37,7 +38,7 @@ function roundUpTo15(minutes: number): number {
   return Math.ceil(minutes / 15) * 15;
 }
 
-export function DayTimeline({ date, activities, onEdit, onDelete, onBack, selectedIds, onToggleSelect, sceneTheme, onFixWithAI }: Props) {
+export function DayTimeline({ date, activities, onEdit, onDelete, onBack, selectedIds, onToggleSelect, sceneTheme, onFixWithAI, labels }: Props) {
   const sorted = [...activities]
     .filter((a) => a.start_time && a.end_time)
     .sort((a, b) => timeToMinutes(a.start_time!) - timeToMinutes(b.start_time!));
@@ -71,6 +72,15 @@ export function DayTimeline({ date, activities, onEdit, onDelete, onBack, select
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h2 className="font-semibold text-sm">{format(date, "EEEE, MMMM d, yyyy")}</h2>
+        {labels.length > 0 && (
+          <div className="flex gap-1">
+            {labels.map((l) => (
+              <span key={l.id} className="text-[10px] rounded px-1.5 py-0.5 text-white font-medium" style={{ backgroundColor: l.color }}>
+                {l.title}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto relative" style={{ height: visibleHours.length * HOUR_HEIGHT }}>

@@ -11,7 +11,7 @@ import {
   isSameDay,
   isToday,
 } from "date-fns";
-import { type Activity, type SceneThemeId } from "@/types/activity";
+import { type Activity, type DayLabel, type SceneThemeId } from "@/types/activity";
 import { getAdjacentColors } from "@/lib/themes";
 
 interface Props {
@@ -22,9 +22,11 @@ interface Props {
   onToggleSelect: (id: string) => void;
   sceneTheme: SceneThemeId;
   month: Date;
+  labels: DayLabel[];
+  onOpenLabels: (day: Date) => void;
 }
 
-export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, onToggleSelect, sceneTheme, month }: Props) {
+export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, onToggleSelect, sceneTheme, month, labels, onOpenLabels }: Props) {
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -61,6 +63,7 @@ export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, 
           {weeks.map((day) => {
             const dayActivities = getActivitiesForDay(day);
             const inMonth = isSameMonth(day, month);
+            const dayLabels = labels.filter((l) => l.label_date === format(day, "yyyy-MM-dd"));
 
             return (
               <div
@@ -69,10 +72,23 @@ export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, 
                   !inMonth ? "opacity-30" : ""
                 } ${isToday(day) ? "ring-1 ring-primary/50" : ""}`}
                 onClick={() => onSelectDay(day)}
+                onDoubleClick={(e) => { e.stopPropagation(); onOpenLabels(day); }}
               >
                 <div className={`text-xs font-medium mb-1 ${isToday(day) ? "text-primary" : ""}`}>
                   {format(day, "d")}
                 </div>
+                {dayLabels.length > 0 && (
+                  <div className="flex flex-wrap gap-0.5 mb-1">
+                    {dayLabels.slice(0, 2).map((l) => (
+                      <span key={l.id} className="text-[9px] rounded px-1 py-0.5 text-white truncate max-w-full" style={{ backgroundColor: l.color }}>
+                        {l.title}
+                      </span>
+                    ))}
+                    {dayLabels.length > 2 && (
+                      <span className="text-[9px] text-muted-foreground">+{dayLabels.length - 2}</span>
+                    )}
+                  </div>
+                )}
                 <div className="space-y-0.5">
                   {dayActivities.slice(0, 4).map((a) => {
                     const bg = colorMap.get(a.id) || "hsl(240, 60%, 45%)";
