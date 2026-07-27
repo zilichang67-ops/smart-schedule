@@ -47,6 +47,9 @@ export function MonthlyCalendar({ activities, onSelectDay, onEdit, selectedIds, 
 
   return (
     <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-card/30">
+        <h2 className="font-semibold text-sm">{format(month, "MMMM yyyy")}</h2>
+      </div>
       <div className="flex-1 overflow-auto p-2">
         <div className="grid grid-cols-7 gap-px">
           {weekDays.map((d) => (

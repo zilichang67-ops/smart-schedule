@@ -241,7 +241,7 @@ export function ScheduleDashboard({ user }: Props) {
     const now = new Date();
     setCurrentWeekStart(startOfWeek(now, { weekStartsOn: 1 }));
     setSelectedDay(now);
-    setView("day");
+    setMonthView(now);
   };
 
   const handlePrev = () => {
