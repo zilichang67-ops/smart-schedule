@@ -9,6 +9,7 @@ import { startOfWeek, format, addDays, addWeeks, subWeeks, addMonths, subMonths 
 import { useSleepSettings } from "@/hooks/use-sleep-settings";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useTimezone } from "@/hooks/use-timezone";
 import { applySceneTheme } from "@/lib/themes";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
@@ -52,6 +53,7 @@ export function ScheduleDashboard({ user }: Props) {
   const sleep = useSleepSettings();
   const bulk = useBulkSelection();
   const notif = useNotifications(activities);
+  const tz = useTimezone();
   const supabase = createClient();
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -62,14 +64,16 @@ export function ScheduleDashboard({ user }: Props) {
 
   useEffect(() => {
     const loadProfile = async () => {
-      const { data } = await supabase.from("user_profiles").select("scene_color_theme, user_role").eq("id", user.id).single();
+      const { data } = await supabase.from("user_profiles").select("scene_color_theme, user_role, timezone").eq("id", user.id).single();
       if (data) {
         setSceneTheme(data.scene_color_theme as SceneThemeId);
         applySceneTheme(data.scene_color_theme as SceneThemeId);
         if (data.user_role) setUserRole(data.user_role as UserRole);
+        tz.initTimezone(data.timezone);
       }
     };
     loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, user.id]);
 
   useEffect(() => {
@@ -417,7 +421,7 @@ export function ScheduleDashboard({ user }: Props) {
                 activities={scheduled} onSelectDay={handleDaySelect} isAsleep={sleep.isAsleep}
                 onEdit={setEditingActivity} onFixWithAI={handleFixWithAI}
                 selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle}
-                sceneTheme={sceneTheme}
+                sceneTheme={sceneTheme} timezone={tz.timezone}
               />
             )}
             {view === "day" && (
@@ -427,7 +431,7 @@ export function ScheduleDashboard({ user }: Props) {
                 onEdit={setEditingActivity} onDelete={handleDeleteActivity}
                 onBack={() => setView("week")} isAsleep={sleep.isAsleep}
                 selectedIds={bulk.selectedIds} onToggleSelect={bulk.toggle} sceneTheme={sceneTheme}
-                onFixWithAI={handleFixWithAI}
+                onFixWithAI={handleFixWithAI} timezone={tz.timezone}
               />
             )}
             {view === "month" && (

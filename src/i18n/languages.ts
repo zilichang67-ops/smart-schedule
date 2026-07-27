@@ -1,7 +1,4 @@
-"use client";
-
-import { useI18n } from "@/i18n/context";
-import { type Locale } from "@/i18n/en";
+import { type Locale } from "./en";
 
 export const LANGUAGES: { code: Locale; label: string; flag: string }[] = [
   { code: "en", label: "English", flag: "🇺🇸" },
