@@ -19,7 +19,7 @@ import {
 import { User, Palette, Lock, Check, Sun, Moon, Monitor, GraduationCap, Briefcase, Globe, Clock } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { type Locale } from "@/i18n/en";
-import { getCommonTimezones } from "@/hooks/use-timezone";
+import { getAllTimezones } from "@/hooks/use-timezone";
 
 interface Props {
   user: SupabaseUser;
@@ -217,7 +217,7 @@ export function ProfileDialog({ user, open, onOpenChange, onThemeChange, onRoleC
                 onChange={(e) => setUserTimezone(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                {getCommonTimezones().map((tz) => (
+                {getAllTimezones().map((tz) => (
                   <option key={tz.value} value={tz.value}>
                     {tz.label} ({tz.offset})
                   </option>
